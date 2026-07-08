@@ -1,0 +1,42 @@
+/* 全局样式 */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue',
+    Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji';
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: #f5f5f5;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+/* 侧边栏菜单选中样式 */
+.ant-menu-item-selected {
+  font-weight: 500;
+}
+
+/* 金额样式 */
+.amount-text {
+  font-size: 18px;
+  font-weight: 600;
+  color: #ff4d4f;
+}
+
+.amount-text-large {
+  font-size: 36px;
+  font-weight: 700;
+  color: #ff4d4f;
+}
+
+/* 统计卡片 */
+.stat-card {
+  text-align: center;
+  padding: 16px;
+}

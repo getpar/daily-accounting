@@ -1,0 +1,33 @@
+{
+  "name": "daily-notes-miniapp",
+  "version": "0.1.0",
+  "private": true,
+  "description": "每日小记 — 微信小程序版",
+  "scripts": {
+    "dev:weapp": "taro build --type weapp --watch",
+    "build:weapp": "taro build --type weapp"
+  },
+  "dependencies": {
+    "@tarojs/components": "3.6.32",
+    "@tarojs/helper": "3.6.32",
+    "@tarojs/plugin-framework-react": "^3.6.32",
+    "@tarojs/plugin-platform-weapp": "3.6.32",
+    "@tarojs/react": "3.6.32",
+    "@tarojs/runtime": "3.6.32",
+    "@tarojs/shared": "3.6.32",
+    "@tarojs/taro": "3.6.32",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.20.0",
+    "@tarojs/cli": "3.6.32",
+    "@tarojs/mini-runner": "3.6.32",
+    "@tarojs/webpack5-runner": "3.6.32",
+    "@types/react": "^18.2.0",
+    "babel-preset-taro": "3.6.32",
+    "typescript": "^5.1.0",
+    "webpack": "^5.76.0"
+  }
+}

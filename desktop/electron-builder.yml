@@ -1,0 +1,28 @@
+appId: com.dailynotes.app
+productName: 每日小记
+directories:
+  output: release
+  buildResources: build
+
+win:
+  icon: build/icon.ico
+  target:
+    - nsis
+  sign: false
+  extraResources:
+    - from: build/icon.png
+      to: icon.png
+
+mac:
+  icon: build/icon.icns
+  target:
+    - dmg
+  extraResources:
+    - from: build/icon.png
+      to: icon.png
+
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  installerIcon: build/icon.ico
+  uninstallerIcon: build/icon.ico

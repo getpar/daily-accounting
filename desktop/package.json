@@ -1,0 +1,36 @@
+{
+  "name": "daily-notes",
+  "version": "0.1.0",
+  "description": "每日小记 — 个人记账桌面应用",
+  "main": "./out/main/index.js",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build && electron-builder",
+    "postbuild": "node -e \"const{execSync}=require('child_process');try{execSync('node_modules/rcedit/bin/rcedit-x64.exe release/win-unpacked/每日小记.exe --set-icon build/icon.ico',{stdio:'pipe'})}catch(e){}\"",
+    "preview": "electron-vite preview"
+  },
+  "dependencies": {
+    "@ant-design/charts": "^2.6.7",
+    "@ant-design/icons": "^5.5.0",
+    "@types/xlsx": "^0.0.35",
+    "antd": "^5.22.0",
+    "dayjs": "^1.11.13",
+    "rcedit": "^5.0.1",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.28.0",
+    "sql.js": "^1.12.0",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@types/sql.js": "^1.4.9",
+    "@vitejs/plugin-react": "^4.3.4",
+    "electron": "^28.2.0",
+    "electron-builder": "^25.1.8",
+    "electron-vite": "^2.3.0",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.0"
+  }
+}

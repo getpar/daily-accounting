@@ -1,0 +1,104 @@
+interface Category {
+  id: number
+  category_key: string
+  subcategory_key: string
+  category_name: string
+  subcategory_name: string
+  sort_order: number
+  is_default: number
+}
+
+interface RecordItem {
+  id: number
+  type: string
+  amount: number
+  category_key: string
+  subcategory_key: string
+  category_name: string
+  subcategory_name: string
+  note: string
+  record_date: string
+  expense_date: string  // 兼容旧字段
+  created_at: string
+  updated_at: string
+}
+
+interface MonthlyStat {
+  category_key: string
+  category_name: string
+  total: number
+}
+
+interface RecordListResult {
+  rows: RecordItem[]
+  total: number
+  page: number
+  pageSize: number
+}
+
+interface RecurringBill {
+  id: number
+  type: string
+  amount: number
+  category_key: string
+  subcategory_key: string
+  category_name: string
+  subcategory_name: string
+  note: string
+  cycle: string
+  next_date: string
+  is_active: number
+}
+
+interface MonthCompareResult {
+  month1: { rows: MonthlyStat[]; total: number }
+  month2: { rows: MonthlyStat[]; total: number }
+}
+
+interface ElectronAPI {
+  // 分类
+  getCategories: () => Promise<Category[]>
+  addCategory: (data: { category_key: string; category_name: string; subcategory_key: string; subcategory_name: string }) => Promise<{ success: boolean; error?: string }>
+  deleteCategory: (categoryKey: string, subcategoryKey: string) => Promise<{ success: boolean; error?: string }>
+
+  // 记录
+  addRecord: (data: { type: string; amount: number; category_key: string; subcategory_key: string; note: string; record_date: string }) => Promise<{ id: number }>
+  getRecordList: (filters?: { page?: number; pageSize?: number; month?: string; category_key?: string; type?: string; keyword?: string }) => Promise<RecordListResult>
+  deleteRecord: (id: number) => Promise<{ success: boolean }>
+  updateRecord: (id: number, data: { type: string; amount: number; category_key: string; subcategory_key: string; note: string; record_date: string }) => Promise<{ success: boolean }>
+
+  // 统计
+  getMonthlyStats: (month: string, type?: string) => Promise<MonthlyStat[]>
+  getMonthlyTotal: (month: string, type?: string) => Promise<number>
+  getDailyTrend: (month: string, type?: string) => Promise<{ date: string; total: number }[]>
+  compareMonths: (month1: string, month2: string) => Promise<MonthCompareResult>
+
+  // 设置
+  getSetting: (key: string) => Promise<string | null>
+  setSetting: (key: string, value: string) => Promise<{ success: boolean }>
+
+  // 导出
+  exportAll: (month?: string, type?: string) => Promise<Record<string, any>[]>
+  saveFile: (defaultName: string, buffer: number[]) => Promise<{ success: boolean; path?: string }>
+
+  // 备份恢复
+  createBackup: () => Promise<{ success: boolean; path?: string }>
+  restoreBackup: () => Promise<{ success: boolean; error?: string }>
+
+  // 周期性账单
+  getRecurringBills: () => Promise<RecurringBill[]>
+  addRecurring: (data: { type: string; amount: number; category_key: string; subcategory_key: string; note: string; cycle: string; next_date: string }) => Promise<{ id: number }>
+  deleteRecurring: (id: number) => Promise<{ success: boolean }>
+  toggleRecurring: (id: number, active: boolean) => Promise<{ success: boolean }>
+  executeRecurring: (id: number) => Promise<{ success: boolean; error?: string }>
+  getShortcut: () => Promise<string>
+  setShortcut: (accelerator: string) => Promise<{ success: boolean }>
+}
+
+declare global {
+  interface Window {
+    electronAPI: ElectronAPI
+  }
+}
+
+export {}

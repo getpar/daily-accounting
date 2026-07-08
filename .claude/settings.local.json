@@ -1,0 +1,43 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install *)",
+      "Bash(rm -f \"每日小记-win-x64.zip\")",
+      "Bash(powershell -Command \"Compress-Archive -Path 'win-unpacked\\\\*' -DestinationPath '每日小记-win-x64.zip'\")",
+      "Bash(ie4uinit.exe -show)",
+      "Bash(rm -f 'C:\\\\Users\\\\10969/AppData/Local/IconCache.db')",
+      "Bash(powershell -Command \"taskkill /f /im explorer.exe; Start-Process explorer.exe\")",
+      "Bash(npx electron-vite *)",
+      "Bash(unset ELECTRON_RUN_AS_NODE)",
+      "Bash(npm run *)",
+      "Bash(taro --version)",
+      "Read(//d/ClaudeDemo/**)",
+      "Bash(taro init *)",
+      "Bash(mkdir -p \"d:/ClaudeDemo/每日小记-小程序/src/pages/index\" \\\\ *)",
+      "Bash(npx taro *)",
+      "Read(//d/Code/Tool/Node/**)",
+      "Bash(nvm list *)",
+      "Bash(cat \"C:\\\\Users\\\\10969\\\\AppData\\\\Local\\\\npm-cache\\\\_logs\\\\2026-07-07T22_46_24_933Z-eresolve-report.txt\" 2>&1 | head -20)",
+      "Read(//c/Users/10969/AppData/Local/npm-cache/_logs/**)",
+      "Bash(curl -L -o 'C:\\\\Users\\\\10969/node-v20.zip' https://npmmirror.com/mirrors/node/v20.18.0/node-v20.18.0-win-x64.zip)",
+      "Bash(unzip -q 'C:\\\\Users\\\\10969/node-v20.zip' -d 'C:\\\\Users\\\\10969/node-v20')",
+      "Bash('C:\\\\Users\\\\10969/node-v20/node-v20.18.0-win-x64/node.exe' --version)",
+      "Read(//c/Users/10969/AppData/Roaming/npm/node_modules/@tarojs/cli/bin/**)",
+      "Read(//c/Users/10969/AppData/Roaming/npm/**)",
+      "Bash(npm ls *)",
+      "Bash(rm -rf \"记账APP/miniapp\")",
+      "Bash(cd /tmp)",
+      "Bash(rm -rf \"d:/ClaudeDemo/记账APP/miniapp\")",
+      "Bash(powershell -Command \"Remove-Item -Path 'd:/ClaudeDemo/记账APP/miniapp' -Recurse -Force\")",
+      "Bash(curl -sL \"https://github.com/NervJS/taro-project-templates/archive/refs/heads/v4.x.zip\" -o /tmp/taro-tpl.zip)",
+      "Bash(powershell -Command \"Expand-Archive -Force -Path '/tmp/taro-tpl.zip' -DestinationPath '/tmp/taro-tpl'\")",
+      "Read(//tmp/**)",
+      "Bash(ls \"$HOME/node-v20/node-v20.18.0-win-x64/\" 2>&1 | head -20)",
+      "Read(//c/Users/10969/node-v20/node-v20.18.0-win-x64/**)"
+    ],
+    "additionalDirectories": [
+      "d:\\ClaudeDemo\\每日小记-小程序\\src\\pages",
+      "d:\\ClaudeDemo\\每日小记-小程序"
+    ]
+  }
+}
