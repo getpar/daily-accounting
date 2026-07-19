@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react'
 import { Card, Form, InputNumber, Select, Input, DatePicker, Button, Typography, message, Segmented } from 'antd'
-import { SaveOutlined } from '@ant-design/icons'
+import { SaveOutlined, ThunderboltOutlined } from '@ant-design/icons'
 import dayjs from 'dayjs'
 
-const { Title } = Typography
+const { Title, Text } = Typography
 
 interface CategoryGroup { category_key: string; category_name: string; subcategories: { subcategory_key: string; subcategory_name: string }[] }
 
@@ -43,31 +43,107 @@ function QuickAddPage(): JSX.Element {
   const subs = selectedCat ? categories.find(c => c.category_key === selectedCat)?.subcategories.map(s => ({ value: s.subcategory_key, label: s.subcategory_name })) || [] : []
 
   return (
-    <div style={{ padding: 16 }}>
-      <Title level={4} style={{ marginBottom: 16 }}>⚡ 快速记账 (Ctrl+Shift+N)</Title>
-      <Form form={form} layout="vertical" onFinish={onFinish} initialValues={{ record_date: dayjs() }}>
-        <Form.Item label="类型">
-          <Segmented block value={recordType} onChange={v => setRecordType(v as string)}
-            options={[{ label: '💰 支出', value: 'expense' }, { label: '💵 收入', value: 'income' }]} />
-        </Form.Item>
-        <Form.Item label="金额" name="amount" rules={[{ required: true, message: '请输入金额' }, { type: 'number', min: 0.01 }]}>
-          <InputNumber prefix="¥" placeholder="0.00" style={{ width: '100%' }} size="large" precision={2} min={0.01} autoFocus />
-        </Form.Item>
-        <Form.Item label="日期" name="record_date" rules={[{ required: true }]}>
-          <DatePicker style={{ width: '100%' }} size="large" allowClear={false} />
-        </Form.Item>
-        <Form.Item label="一级分类" name="category_key" rules={[{ required: true }]}>
-          <Select placeholder="选择大类" size="large" onChange={v => { setSelectedCat(v); form.setFieldValue('subcategory_key', undefined) }}
-            options={categories.map(c => ({ value: c.category_key, label: c.category_name }))} />
-        </Form.Item>
-        <Form.Item label="二级分类" name="subcategory_key" rules={[{ required: true }]}>
-          <Select placeholder={selectedCat ? '选择小类' : '请先选择大类'} size="large" disabled={!selectedCat} options={subs} />
-        </Form.Item>
-        <Form.Item label="备注" name="note">
-          <Input placeholder="可选" maxLength={200} />
-        </Form.Item>
-        <Button type="primary" htmlType="submit" icon={<SaveOutlined />} loading={loading} size="large" block>保存</Button>
-      </Form>
+    <div style={{ maxWidth: 520, margin: '0 auto', padding: 8 }}>
+      {/* 标题 */}
+      <div style={{ marginBottom: 20, display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div style={{
+          width: 40, height: 40, borderRadius: 12,
+          background: 'linear-gradient(135deg, #FFF0E8, #FFD4BC)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 18,
+        }}>
+          ⚡
+        </div>
+        <div>
+          <div style={{ fontSize: 18, fontWeight: 700, color: '#1E293B' }}>快速记账</div>
+          <Text type="secondary" style={{ fontSize: 12 }}>快捷键 Ctrl+Shift+N</Text>
+        </div>
+      </div>
+
+      <Card
+        style={{ borderRadius: 16, border: '1px solid #E2E8F0' }}
+        styles={{ body: { padding: 24 } }}
+      >
+        <Form form={form} layout="vertical" onFinish={onFinish} initialValues={{ record_date: dayjs() }} size="large">
+          <Form.Item label={<span style={{ fontSize: 13, fontWeight: 600 }}>类型</span>}>
+            <Segmented
+              block
+              value={recordType}
+              onChange={v => setRecordType(v as string)}
+              options={[
+                { label: '💰 支出', value: 'expense' },
+                { label: '💵 收入', value: 'income' },
+              ]}
+            />
+          </Form.Item>
+
+          <Form.Item
+            label={<span style={{ fontSize: 13, fontWeight: 600 }}>金额</span>}
+            name="amount"
+            rules={[{ required: true, message: '请输入金额' }, { type: 'number', min: 0.01 }]}
+          >
+            <InputNumber
+              prefix={<span style={{ color: '#94A3B8', fontSize: 20, fontWeight: 600 }}>¥</span>}
+              placeholder="0.00"
+              style={{ width: '100%', height: 50 }}
+              precision={2}
+              min={0.01}
+              controls={false}
+              autoFocus
+            />
+          </Form.Item>
+
+          <Form.Item
+            label={<span style={{ fontSize: 13, fontWeight: 600 }}>日期</span>}
+            name="record_date"
+            rules={[{ required: true }]}
+          >
+            <DatePicker style={{ width: '100%', height: 44 }} allowClear={false} />
+          </Form.Item>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+            <Form.Item
+              label={<span style={{ fontSize: 13, fontWeight: 600 }}>大类</span>}
+              name="category_key"
+              rules={[{ required: true }]}
+            >
+              <Select
+                placeholder="选择"
+                onChange={v => { setSelectedCat(v); form.setFieldValue('subcategory_key', undefined) }}
+                options={categories.map(c => ({ value: c.category_key, label: c.category_name }))}
+              />
+            </Form.Item>
+
+            <Form.Item
+              label={<span style={{ fontSize: 13, fontWeight: 600 }}>小类</span>}
+              name="subcategory_key"
+              rules={[{ required: true }]}
+            >
+              <Select
+                placeholder={selectedCat ? '选择' : '先选大类'}
+                disabled={!selectedCat}
+                options={subs}
+              />
+            </Form.Item>
+          </div>
+
+          <Form.Item label={<span style={{ fontSize: 13, fontWeight: 600 }}>备注</span>} name="note">
+            <Input placeholder="可选" maxLength={200} style={{ borderRadius: 10 }} />
+          </Form.Item>
+
+          <Button
+            type="primary"
+            htmlType="submit"
+            icon={<SaveOutlined />}
+            loading={loading}
+            size="large"
+            block
+            style={{ height: 48, fontSize: 15, fontWeight: 600, borderRadius: 12 }}
+          >
+            保存
+          </Button>
+        </Form>
+      </Card>
     </div>
   )
 }

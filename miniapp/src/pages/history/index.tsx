@@ -127,7 +127,7 @@ export default function History(): JSX.Element {
           <View className='record-main'>
             <View className='record-info'>
               <View className='record-tags'>
-                <Text className='tag blue'>{r.categoryName}</Text>
+                <Text className='tag orange'>{r.categoryName}</Text>
                 <Text className='tag'>{r.subcategoryName}</Text>
               </View>
               <Text className='record-date'>{r.date} {r.note || ''}</Text>

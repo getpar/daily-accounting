@@ -3,7 +3,7 @@ import {
   Card, Table, Tag, Select, DatePicker, Input, Space, Typography,
   Popconfirm, message, Button, Modal, Form, InputNumber, Segmented,
 } from 'antd'
-import { DeleteOutlined, ReloadOutlined, DownloadOutlined, EditOutlined } from '@ant-design/icons'
+import { DeleteOutlined, ReloadOutlined, DownloadOutlined, EditOutlined, SearchOutlined } from '@ant-design/icons'
 import dayjs, { Dayjs } from 'dayjs'
 import * as XLSX from 'xlsx'
 
@@ -25,10 +25,8 @@ function HistoryPage(): JSX.Element {
   const [catGroups, setCatGroups] = useState<CategoryGroup[]>([])
   const pageSize = 15
 
-  // 批量删除
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([])
 
-  // 编辑弹窗
   const [editModalOpen, setEditModalOpen] = useState(false)
   const [editingRecord, setEditingRecord] = useState<any>(null)
   const [editForm] = Form.useForm()
@@ -69,7 +67,6 @@ function HistoryPage(): JSX.Element {
     loadData()
   }
 
-  // 批量删除
   async function handleBatchDelete(): Promise<void> {
     for (const id of selectedRowKeys) {
       await window.electronAPI.deleteRecord(id as number)
@@ -79,7 +76,6 @@ function HistoryPage(): JSX.Element {
     loadData()
   }
 
-  // 打开编辑弹窗
   function openEditModal(record: any): void {
     setEditingRecord(record)
     setEditSelCat(record.category_key)
@@ -94,7 +90,6 @@ function HistoryPage(): JSX.Element {
     setEditModalOpen(true)
   }
 
-  // 提交编辑
   async function handleEditSubmit(): Promise<void> {
     try {
       const v = await editForm.validateFields()
@@ -130,16 +125,53 @@ function HistoryPage(): JSX.Element {
   const editSubs = editSelCat ? catGroups.find(c => c.category_key === editSelCat)?.subcategories.map(s => ({ value: s.subcategory_key, label: s.subcategory_name })) || [] : []
 
   const columns = [
-    { title: '日期', dataIndex: 'record_date', key: 'date', width: 110, render: (v: string) => v || '-', sorter: (a: any, b: any) => (a.record_date || '').localeCompare(b.record_date || '') },
-    { title: '类型', dataIndex: 'type', key: 'type', width: 70, render: (t: string) => <Tag color={t === 'income' ? 'green' : 'red'}>{t === 'income' ? '收入' : '支出'}</Tag> },
-    { title: '分类', key: 'cat', width: 170, render: (_: any, r: any) => <span><Tag color="blue">{r.category_name}</Tag><Tag>{r.subcategory_name}</Tag></span> },
-    { title: '金额', dataIndex: 'amount', key: 'amount', width: 120, render: (a: number, r: any) => <span style={{ color: r.type === 'income' ? '#52c41a' : '#ff4d4f', fontWeight: 600, fontSize: 16 }}>{r.type === 'income' ? '+' : '-'}¥{a.toFixed(2)}</span>, sorter: (a: any, b: any) => a.amount - b.amount },
-    { title: '备注', dataIndex: 'note', key: 'note', ellipsis: true, render: (n: string) => n || '-' },
+    {
+      title: '日期', dataIndex: 'record_date', key: 'date', width: 110,
+      render: (v: string) => <Text style={{ fontSize: 13 }}>{v || '-'}</Text>,
+      sorter: (a: any, b: any) => (a.record_date || '').localeCompare(b.record_date || ''),
+    },
+    {
+      title: '类型', dataIndex: 'type', key: 'type', width: 70,
+      render: (t: string) => (
+        <Tag color={t === 'income' ? 'success' : 'error'} style={{ borderRadius: 6 }}>
+          {t === 'income' ? '收入' : '支出'}
+        </Tag>
+      ),
+    },
+    {
+      title: '分类', key: 'cat', width: 170,
+      render: (_: any, r: any) => (
+        <Space size={4}>
+          <Tag color="orange" style={{ borderRadius: 6 }}>{r.category_name}</Tag>
+          <Tag style={{ borderRadius: 6 }}>{r.subcategory_name}</Tag>
+        </Space>
+      ),
+    },
+    {
+      title: '金额', dataIndex: 'amount', key: 'amount', width: 120,
+      render: (a: number, r: any) => (
+        <span style={{
+          color: r.type === 'income' ? '#10B981' : '#EF4444',
+          fontWeight: 700,
+          fontSize: 15,
+          fontVariantNumeric: 'tabular-nums',
+        }}>
+          {r.type === 'income' ? '+' : '-'}¥{a.toFixed(2)}
+        </span>
+      ),
+      sorter: (a: any, b: any) => a.amount - b.amount,
+    },
+    {
+      title: '备注', dataIndex: 'note', key: 'note', ellipsis: true,
+      render: (n: string) => <Text type="secondary" style={{ fontSize: 13 }}>{n || '-'}</Text>,
+    },
     {
       title: '操作', key: 'act', width: 120,
       render: (_: any, r: any) => (
         <Space size={0}>
-          <Button type="link" size="small" icon={<EditOutlined />} onClick={() => openEditModal(r)}>编辑</Button>
+          <Button type="link" size="small" icon={<EditOutlined />} onClick={() => openEditModal(r)} style={{ color: '#FF6B35' }}>
+            编辑
+          </Button>
           <Popconfirm title="确定删除？" onConfirm={() => handleDelete(r.id)}>
             <Button type="link" danger size="small" icon={<DeleteOutlined />} />
           </Popconfirm>
@@ -155,63 +187,149 @@ function HistoryPage(): JSX.Element {
 
   return (
     <div>
-      <Title level={3} style={{ marginBottom: 24 }}>📋 账单明细</Title>
-      <Card>
-        <Space style={{ marginBottom: 16 }} wrap>
-          <DatePicker picker="month" value={selectedMonth} onChange={d => { setSelectedMonth(d || dayjs()); setPage(1) }} allowClear={false} format="YYYY年M月" />
-          <Select placeholder="全部类别" allowClear style={{ width: 130 }} value={selectedCategory} onChange={v => { setSelectedCategory(v); setPage(1) }} options={categories} />
-          <Select placeholder="全部类型" allowClear style={{ width: 100 }} value={selectedType} onChange={v => { setSelectedType(v); setPage(1) }}
-            options={[{ value: 'expense', label: '支出' }, { value: 'income', label: '收入' }]} />
-          <Search placeholder="搜索备注/分类" allowClear style={{ width: 200 }} onSearch={v => { setKeyword(v); setPage(1) }} />
-          <Button icon={<ReloadOutlined />} onClick={loadData}>刷新</Button>
-          <Button icon={<DownloadOutlined />} type="primary" onClick={handleExport}>导出Excel</Button>
+      {/* 标题行 */}
+      <div style={{ marginBottom: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div>
+          <Text type="secondary" style={{ fontSize: 12, fontWeight: 500, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+            账单明细
+          </Text>
+          <div style={{ fontSize: 22, fontWeight: 700, color: '#1E293B' }}>📋 所有记录</div>
+        </div>
+      </div>
+
+      <Card styles={{ body: { padding: 24 } }}>
+        {/* 筛选栏 */}
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20,
+          flexWrap: 'wrap', padding: '16px 20px',
+          background: '#F8FAFC', borderRadius: 12,
+        }}>
+          <DatePicker
+            picker="month"
+            value={selectedMonth}
+            onChange={d => { setSelectedMonth(d || dayjs()); setPage(1) }}
+            allowClear={false}
+            format="YYYY年M月"
+            style={{ borderRadius: 10 }}
+          />
+          <Select
+            placeholder="全部类别"
+            allowClear
+            style={{ width: 130, borderRadius: 10 }}
+            value={selectedCategory}
+            onChange={v => { setSelectedCategory(v); setPage(1) }}
+            options={categories}
+          />
+          <Select
+            placeholder="全部类型"
+            allowClear
+            style={{ width: 100, borderRadius: 10 }}
+            value={selectedType}
+            onChange={v => { setSelectedType(v); setPage(1) }}
+            options={[{ value: 'expense', label: '支出' }, { value: 'income', label: '收入' }]}
+          />
+          <Search
+            placeholder="搜索备注/分类"
+            allowClear
+            style={{ width: 220 }}
+            onSearch={v => { setKeyword(v); setPage(1) }}
+            enterButton={<SearchOutlined />}
+          />
+          <div style={{ flex: 1 }} />
+          <Button icon={<ReloadOutlined />} onClick={loadData} style={{ borderRadius: 10 }}>
+            刷新
+          </Button>
+          <Button icon={<DownloadOutlined />} type="primary" onClick={handleExport} style={{ borderRadius: 10 }}>
+            导出 Excel
+          </Button>
           {selectedRowKeys.length > 0 && (
             <Popconfirm title={`确定删除选中的 ${selectedRowKeys.length} 条记录？`} onConfirm={handleBatchDelete}>
-              <Button danger icon={<DeleteOutlined />}>删除选中 ({selectedRowKeys.length})</Button>
+              <Button danger icon={<DeleteOutlined />} style={{ borderRadius: 10 }}>
+                删除选中 ({selectedRowKeys.length})
+              </Button>
             </Popconfirm>
           )}
-        </Space>
-
-        <div style={{ marginBottom: 16 }}>
-          <Text type="secondary">{selectedMonth.format('M月')}：</Text>
-          <Text strong style={{ color: '#ff4d4f', margin: '0 8px' }}>支出 ¥{expenseSum.toFixed(2)}</Text>
-          <Text strong style={{ color: '#52c41a', marginRight: 8 }}>收入 ¥{incomeSum.toFixed(2)}</Text>
-          <Text strong style={{ color: monthTotal >= 0 ? '#52c41a' : '#ff4d4f' }}>结余 ¥{monthTotal.toFixed(2)}</Text>
-          <Text type="secondary" style={{ marginLeft: 16 }}>共 {total} 条</Text>
         </div>
 
+        {/* 汇总栏 */}
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 20,
+          padding: '12px 20px', marginBottom: 16,
+          background: 'linear-gradient(135deg, #F8FAFC, #FFF)',
+          borderRadius: 12, border: '1px solid #E2E8F0',
+        }}>
+          <Text type="secondary" style={{ fontSize: 13 }}>{selectedMonth.format('M月')}汇总：</Text>
+          <Text strong style={{ color: '#EF4444', fontSize: 15 }}>
+            支出 ¥{expenseSum.toFixed(2)}
+          </Text>
+          <Text strong style={{ color: '#10B981', fontSize: 15 }}>
+            收入 ¥{incomeSum.toFixed(2)}
+          </Text>
+          <Text strong style={{ color: monthTotal >= 0 ? '#10B981' : '#EF4444', fontSize: 15 }}>
+            结余 ¥{monthTotal.toFixed(2)}
+          </Text>
+          <div style={{ flex: 1 }} />
+          <Text type="secondary" style={{ fontSize: 13 }}>共 {total} 条记录</Text>
+        </div>
+
+        {/* 表格 */}
         <Table
-          columns={columns} dataSource={data} rowKey="id" loading={loading}
+          columns={columns}
+          dataSource={data}
+          rowKey="id"
+          loading={loading}
           rowSelection={rowSelection}
-          pagination={{ current: page, pageSize, total, onChange: p => setPage(p), showTotal: t => `共 ${t} 条`, showSizeChanger: false }}
+          pagination={{
+            current: page,
+            pageSize,
+            total,
+            onChange: p => setPage(p),
+            showTotal: t => `共 ${t} 条`,
+            showSizeChanger: false,
+          }}
           size="middle"
+          style={{ borderRadius: 12, overflow: 'hidden' }}
         />
       </Card>
 
       {/* 编辑弹窗 */}
-      <Modal title="编辑记录" open={editModalOpen} onOk={handleEditSubmit}
-        onCancel={() => setEditModalOpen(false)} okText="保存修改" cancelText="取消" width={500}
+      <Modal
+        title="编辑记录"
+        open={editModalOpen}
+        onOk={handleEditSubmit}
+        onCancel={() => setEditModalOpen(false)}
+        okText="保存修改"
+        cancelText="取消"
+        width={500}
       >
         {editingRecord && (
           <Form form={editForm} layout="vertical" style={{ marginTop: 16 }}>
             <Form.Item label="类型" name="type">
-              <Segmented block options={[{ label: '💰 支出', value: 'expense' }, { label: '💵 收入', value: 'income' }]} />
+              <Segmented
+                block
+                options={[
+                  { label: '💰 支出', value: 'expense' },
+                  { label: '💵 收入', value: 'income' },
+                ]}
+              />
             </Form.Item>
             <Form.Item label="金额" name="amount" rules={[{ required: true }, { type: 'number', min: 0.01 }]}>
-              <InputNumber prefix="¥" style={{ width: '100%' }} precision={2} />
+              <InputNumber prefix="¥" style={{ width: '100%', borderRadius: 10 }} precision={2} />
             </Form.Item>
             <Form.Item label="日期" name="record_date" rules={[{ required: true }]}>
-              <DatePicker style={{ width: '100%' }} allowClear={false} />
+              <DatePicker style={{ width: '100%', borderRadius: 10 }} allowClear={false} />
             </Form.Item>
             <Form.Item label="一级分类" name="category_key" rules={[{ required: true }]}>
-              <Select onChange={v => { setEditSelCat(v); editForm.setFieldValue('subcategory_key', undefined) }}
-                options={catGroups.map(c => ({ value: c.category_key, label: c.category_name }))} />
+              <Select
+                onChange={v => { setEditSelCat(v); editForm.setFieldValue('subcategory_key', undefined) }}
+                options={catGroups.map(c => ({ value: c.category_key, label: c.category_name }))}
+              />
             </Form.Item>
             <Form.Item label="二级分类" name="subcategory_key" rules={[{ required: true }]}>
               <Select disabled={!editSelCat} options={editSubs} />
             </Form.Item>
             <Form.Item label="备注" name="note">
-              <Input.TextArea rows={2} maxLength={200} />
+              <Input.TextArea rows={2} maxLength={200} style={{ borderRadius: 10 }} />
             </Form.Item>
           </Form>
         )}

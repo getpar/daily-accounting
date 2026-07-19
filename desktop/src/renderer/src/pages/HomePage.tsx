@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
-import { Card, Statistic, Row, Col, Typography, List, Tag, Progress, InputNumber, Button, Modal, Alert } from 'antd'
-import { WalletOutlined, CalendarOutlined, EditOutlined, WarningOutlined, ArrowUpOutlined, ArrowDownOutlined } from '@ant-design/icons'
+import { Card, Row, Col, Typography, List, Tag, Progress, InputNumber, Button, Modal, Alert } from 'antd'
+import { WalletOutlined, EditOutlined, ArrowUpOutlined, ArrowDownOutlined } from '@ant-design/icons'
 import dayjs from 'dayjs'
 
 const { Title, Text } = Typography
@@ -45,79 +45,271 @@ function HomePage(): JSX.Element {
   const isOverBudget = budget ? expenseTotal > budget : false
 
   function getBudgetColor(): string {
-    if (!budget) return '#1677ff'
-    if (budgetPercent > 100) return '#ff4d4f'
-    if (budgetPercent >= 80) return '#ff4d4f'
-    if (budgetPercent >= 50) return '#faad14'
-    return '#52c41a'
+    if (!budget) return '#FF6B35'
+    if (budgetPercent > 100) return '#EF4444'
+    if (budgetPercent >= 80) return '#EF4444'
+    if (budgetPercent >= 50) return '#F59E0B'
+    return '#10B981'
   }
+
+  // 分类 emoji 映射
+  const catEmoji: Record<string, string> = {
+    food: '🍜', transport: '🚗', shopping: '🛒', housing: '🏠',
+    entertainment: '🎮', medical: '💊', education: '📚', social: '🎁',
+    finance: '💰', other: '📦', income: '💵',
+  }
+
+  // 统计卡片配置
+  const statCards = [
+    {
+      title: '本月支出',
+      value: expenseTotal,
+      color: '#EF4444',
+      bg: 'linear-gradient(135deg, #FEF2F2 0%, #FFFFFF 100%)',
+      border: '1px solid rgba(239,68,68,0.15)',
+      icon: <ArrowUpOutlined />,
+      prefix: '-¥',
+    },
+    {
+      title: '本月收入',
+      value: incomeTotal,
+      color: '#10B981',
+      bg: 'linear-gradient(135deg, #ECFDF5 0%, #FFFFFF 100%)',
+      border: '1px solid rgba(16,185,129,0.15)',
+      icon: <ArrowDownOutlined />,
+      prefix: '+¥',
+    },
+    {
+      title: '收支结余',
+      value: Math.abs(balance),
+      color: balance >= 0 ? '#10B981' : '#EF4444',
+      bg: balance >= 0
+        ? 'linear-gradient(135deg, #EFF6FF 0%, #FFFFFF 100%)'
+        : 'linear-gradient(135deg, #FEF2F2 0%, #FFFFFF 100%)',
+      border: balance >= 0
+        ? '1px solid rgba(59,130,246,0.15)'
+        : '1px solid rgba(239,68,68,0.15)',
+      icon: <WalletOutlined />,
+      prefix: balance >= 0 ? '¥' : '-¥',
+    },
+  ]
 
   return (
     <div>
-      <Title level={3} style={{ marginBottom: 24 }}>本月概览 — {dayjs().format('YYYY年M月')}</Title>
+      {/* 页面标题 */}
+      <div style={{ marginBottom: 24 }}>
+        <Text type="secondary" style={{ fontSize: 14, fontWeight: 500, letterSpacing: 0.5, textTransform: 'uppercase' }}>
+          本月概览
+        </Text>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginTop: 2 }}>
+          <span style={{ fontSize: 28, fontWeight: 800, color: '#1E293B' }}>
+            {dayjs().format('YYYY年M月')}
+          </span>
+          <Text type="secondary" style={{ fontSize: 14 }}>
+            {dayjs().format('ddd, MMM D')}
+          </Text>
+        </div>
+      </div>
 
+      {/* 超支/预算警告 */}
       {budget && isOverBudget && (
-        <Alert message={`⚠️ 已超支 ¥${(expenseTotal - budget).toFixed(2)}（预算 ¥${budget.toFixed(0)}，本月已用 ¥${expenseTotal.toFixed(2)}）`} type="error" showIcon style={{ marginBottom: 16 }} />
+        <Alert
+          message={
+            <span>
+              本月已超支 <strong>¥{(expenseTotal - budget).toFixed(2)}</strong>
+              <span style={{ marginLeft: 12, opacity: 0.7 }}>预算 ¥{budget.toFixed(0)} · 已用 ¥{expenseTotal.toFixed(2)}</span>
+            </span>
+          }
+          type="error"
+          showIcon
+          style={{ marginBottom: 20, borderRadius: 12 }}
+        />
       )}
       {budget && budgetPercent >= 80 && !isOverBudget && (
-        <Alert message={`⚡ 已用预算的 ${budgetPercent}%，剩余 ¥${(budget - expenseTotal).toFixed(2)}（预算 ¥${budget.toFixed(0)}）`} type="warning" showIcon style={{ marginBottom: 16 }} />
+        <Alert
+          message={
+            <span>
+              已用预算的 <strong>{budgetPercent}%</strong>
+              <span style={{ marginLeft: 12, opacity: 0.7 }}>剩余 ¥{(budget - expenseTotal).toFixed(2)} · 预算 ¥{budget.toFixed(0)}</span>
+            </span>
+          }
+          type="warning"
+          showIcon
+          style={{ marginBottom: 20, borderRadius: 12 }}
+        />
       )}
 
-      <Row gutter={16} style={{ marginBottom: 24 }}>
-        <Col span={6}>
-          <Card><Statistic title="本月支出" value={expenseTotal} precision={2} prefix="¥" valueStyle={{ color: '#ff4d4f', fontSize: 26 }} /></Card>
-        </Col>
-        <Col span={6}>
-          <Card><Statistic title="本月收入" value={incomeTotal} precision={2} prefix="¥" valueStyle={{ color: '#52c41a', fontSize: 26 }} /></Card>
-        </Col>
-        <Col span={6}>
-          <Card><Statistic title="收支结余" value={balance} precision={2} prefix={balance >= 0 ? '¥' : '-¥'} valueStyle={{ color: balance >= 0 ? '#52c41a' : '#ff4d4f', fontSize: 26 }} /></Card>
-        </Col>
-        <Col span={6}>
-          <Card>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-              <Statistic title={budget ? '月度预算' : '设置预算'} value={budget ? `¥${budget.toFixed(0)}` : '未设置'} valueStyle={{ fontSize: 22, color: budget ? '#1677ff' : '#999' }} />
-              <Button type="link" icon={<EditOutlined />} onClick={() => { setBudgetInput(budget); setBudgetModalOpen(true) }} />
+      {/* 三大统计卡片 */}
+      <Row gutter={20} style={{ marginBottom: 24 }}>
+        {statCards.map((card) => (
+          <Col span={8} key={card.title}>
+            <div
+              style={{
+                background: card.bg,
+                border: card.border,
+                borderRadius: 16,
+                padding: '20px 24px',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+                transition: 'all 0.2s ease',
+              }}
+            >
+              <div style={{ fontSize: 13, color: '#64748B', fontWeight: 500, marginBottom: 8 }}>
+                {card.title}
+              </div>
+              <div style={{ fontSize: 30, fontWeight: 800, color: card.color, fontVariantNumeric: 'tabular-nums' }}>
+                {card.prefix}{card.value.toFixed(2)}
+              </div>
             </div>
-          </Card>
-        </Col>
+          </Col>
+        ))}
       </Row>
 
-      {budget && (
-        <Card style={{ marginBottom: 24 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-            <span><Text strong>预算使用进度</Text><Tag color={getBudgetColor()} style={{ marginLeft: 8 }}>{budgetPercent}%</Tag></span>
-            <Text type="secondary">剩余 ¥{Math.max(budget - expenseTotal, 0).toFixed(2)}</Text>
+      {/* 预算卡片 */}
+      <Card
+        style={{ marginBottom: 24 }}
+        styles={{ body: { padding: '20px 24px' } }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ flex: 1 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+              <Text strong style={{ fontSize: 15 }}>📊 月度预算</Text>
+              {budget ? (
+                <Tag color={budgetPercent > 100 ? 'error' : budgetPercent >= 80 ? 'warning' : 'success'}>
+                  {budgetPercent}%
+                </Tag>
+              ) : (
+                <Tag>未设置</Tag>
+              )}
+            </div>
+            {budget ? (
+              <>
+                <Progress
+                  percent={Math.min(budgetPercent, 100)}
+                  strokeColor={getBudgetColor()}
+                  trailColor="#F1F5F9"
+                  strokeWidth={12}
+                  format={() => ''}
+                  style={{ marginBottom: 8 }}
+                />
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <Text type="secondary" style={{ fontSize: 13 }}>
+                    已用 ¥{expenseTotal.toFixed(2)}
+                  </Text>
+                  <Text type="secondary" style={{ fontSize: 13 }}>
+                    预算 ¥{budget.toFixed(0)} · 剩余 ¥{Math.max(budget - expenseTotal, 0).toFixed(2)}
+                  </Text>
+                </div>
+              </>
+            ) : (
+              <Text type="secondary" style={{ fontSize: 13 }}>
+                设置每月支出上限，帮你控制花销
+              </Text>
+            )}
           </div>
-          <Progress percent={Math.min(budgetPercent, 100)} strokeColor={getBudgetColor()} trailColor="#f0f0f0" strokeWidth={14} format={() => `${budgetPercent}%`} />
-        </Card>
-      )}
+          <Button
+            type={budget ? 'default' : 'primary'}
+            icon={<EditOutlined />}
+            onClick={() => { setBudgetInput(budget); setBudgetModalOpen(true) }}
+            style={{ marginLeft: 24, borderRadius: 10 }}
+          >
+            {budget ? '调整' : '设置预算'}
+          </Button>
+        </div>
+      </Card>
 
-      <Card title="最近记录">
+      {/* 最近记录 */}
+      <Card
+        title={<span style={{ fontSize: 15, fontWeight: 600 }}>📋 最近记录</span>}
+        styles={{ body: { padding: 0 } }}
+      >
         {recentRecords.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: 40, color: '#999' }}>
-            <WalletOutlined style={{ fontSize: 48, marginBottom: 16 }} />
-            <br /><Text type="secondary">本月还没有记录</Text>
+          <div style={{ textAlign: 'center', padding: 60, color: '#94A3B8' }}>
+            <WalletOutlined style={{ fontSize: 48, marginBottom: 16, opacity: 0.3 }} />
+            <br />
+            <Text type="secondary">本月还没有记录，去记一笔吧</Text>
           </div>
         ) : (
-          <List dataSource={recentRecords} renderItem={(item: any) => (
-            <List.Item>
-              <List.Item.Meta
-                title={<span><Tag color={item.type === 'income' ? 'green' : 'blue'}>{item.type === 'income' ? '收入' : '支出'}</Tag><Tag color="blue">{item.category_name}</Tag><Tag>{item.subcategory_name}</Tag></span>}
-                description={`${item.expense_date || item.record_date} ${item.note || ''}`}
-              />
-              <span style={{ fontSize: 16, fontWeight: 600, color: item.type === 'income' ? '#52c41a' : '#ff4d4f' }}>
-                {item.type === 'income' ? '+' : '-'}¥{item.amount.toFixed(2)}
-              </span>
-            </List.Item>
-          )} />
+          <List
+            dataSource={recentRecords}
+            renderItem={(item: any, index: number) => (
+              <List.Item
+                style={{
+                  padding: '14px 24px',
+                  borderBottom: index < recentRecords.length - 1 ? '1px solid #F1F5F9' : 'none',
+                  transition: 'background 0.15s',
+                }}
+              >
+                <List.Item.Meta
+                  avatar={
+                    <div style={{
+                      width: 42,
+                      height: 42,
+                      borderRadius: 12,
+                      background: item.type === 'income' ? '#ECFDF5' : '#FFF0E8',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: 20,
+                    }}>
+                      {catEmoji[item.category_key] || '📌'}
+                    </div>
+                  }
+                  title={
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <Text strong style={{ fontSize: 14 }}>
+                        {item.subcategory_name}
+                      </Text>
+                      <Tag
+                        color={item.type === 'income' ? 'success' : 'default'}
+                        style={{ borderRadius: 6, fontSize: 11 }}
+                      >
+                        {item.type === 'income' ? '收入' : '支出'}
+                      </Tag>
+                    </div>
+                  }
+                  description={
+                    <Text type="secondary" style={{ fontSize: 12 }}>
+                      {item.record_date || item.expense_date} {item.note ? `· ${item.note}` : ''}
+                    </Text>
+                  }
+                />
+                <span style={{
+                  fontSize: 16,
+                  fontWeight: 700,
+                  color: item.type === 'income' ? '#10B981' : '#EF4444',
+                  fontVariantNumeric: 'tabular-nums',
+                }}>
+                  {item.type === 'income' ? '+' : '-'}¥{item.amount.toFixed(2)}
+                </span>
+              </List.Item>
+            )}
+          />
         )}
       </Card>
 
-      <Modal title="设置月度支出预算" open={budgetModalOpen} onOk={saveBudget} onCancel={() => setBudgetModalOpen(false)} okText="保存" cancelText="取消">
-        <div style={{ padding: '16px 0' }}>
-          <Text type="secondary" style={{ display: 'block', marginBottom: 12 }}>设置每月支出上限</Text>
-          <InputNumber prefix="¥" placeholder="例如：5000" style={{ width: '100%' }} size="large" value={budgetInput} onChange={(v) => setBudgetInput(v)} min={0} precision={2} />
+      {/* 预算弹窗 */}
+      <Modal
+        title="设置月度支出预算"
+        open={budgetModalOpen}
+        onOk={saveBudget}
+        onCancel={() => setBudgetModalOpen(false)}
+        okText="保存"
+        cancelText="取消"
+      >
+        <div style={{ padding: '8px 0' }}>
+          <Text type="secondary" style={{ display: 'block', marginBottom: 16 }}>
+            设置每月支出上限，超支时会收到提醒
+          </Text>
+          <InputNumber
+            prefix="¥"
+            placeholder="例如：5000"
+            style={{ width: '100%' }}
+            size="large"
+            value={budgetInput}
+            onChange={(v) => setBudgetInput(v)}
+            min={0}
+            precision={2}
+          />
         </div>
       </Modal>
     </div>

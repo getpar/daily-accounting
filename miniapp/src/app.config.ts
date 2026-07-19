@@ -8,14 +8,15 @@ export default defineAppConfig({
   ],
   window: {
     backgroundTextStyle: 'light',
-    navigationBarBackgroundColor: '#1677ff',
+    navigationBarBackgroundColor: '#FF6B35',
     navigationBarTitleText: '每日小记',
     navigationBarTextStyle: 'white',
   },
   tabBar: {
-    color: '#999',
-    selectedColor: '#1677ff',
-    backgroundColor: '#fff',
+    color: '#94A3B8',
+    selectedColor: '#FF6B35',
+    backgroundColor: '#FFFFFF',
+    borderStyle: 'white',
     list: [
       { pagePath: 'pages/index/index', text: '首页' },
       { pagePath: 'pages/add/index', text: '记一笔' },

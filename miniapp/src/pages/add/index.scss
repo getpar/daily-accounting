@@ -1,19 +1,33 @@
-.wrap { padding: 20px; padding-bottom: 120px; }
-.type-switch { display: flex; gap: 16px; margin-bottom: 20px; }
-.type-btn { flex: 1; text-align: center; padding: 20px; border-radius: 16px; font-size: 30px; background: #fff; color: #666; transition: all 0.2s; }
-.type-btn.active { color: #fff; font-weight: 600; }
-.type-btn.active.expense { background: #ff4d4f; }
-.type-btn.active.income { background: #52c41a; }
-.card { background: #fff; border-radius: 16px; padding: 24px; margin-bottom: 20px; }
-.label { font-size: 26px; color: #999; display: block; margin-bottom: 12px; }
+.wrap { padding: 24rpx; padding-bottom: 120rpx; }
+
+/* 类型切换 */
+.type-switch { display: flex; gap: 16rpx; margin-bottom: 20rpx; background: #F1F5F9; border-radius: 18rpx; padding: 6rpx; }
+.type-btn { flex: 1; text-align: center; padding: 18rpx; border-radius: 14rpx; font-size: 28rpx; color: #94A3B8; font-weight: 500; transition: all 0.2s; }
+.type-btn.active { color: #fff; font-weight: 700; box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.1); }
+.type-btn.active.expense { background: #EF4444; }
+.type-btn.active.income { background: #10B981; }
+
+/* 卡片 */
+.card { background: #fff; border-radius: 24rpx; padding: 24rpx; margin-bottom: 20rpx; box-shadow: 0 2rpx 12rpx rgba(0,0,0,0.04); }
+.label { font-size: 26rpx; color: #94A3B8; display: block; margin-bottom: 10rpx; font-weight: 500; }
+
+/* 金额 */
 .amount-row { display: flex; align-items: center; }
-.currency { font-size: 48px; font-weight: 700; color: #1677ff; margin-right: 12px; }
-.amount-input { font-size: 48px; font-weight: 700; flex: 1; height: 64px; }
-.picker { display: flex; justify-content: space-between; align-items: center; font-size: 30px; padding: 8px 0; }
-.arrow { font-size: 36px; color: #ccc; }
-.placeholder { color: #ccc; }
-.sub-grid { display: flex; flex-wrap: wrap; gap: 12px; }
-.sub-item { padding: 12px 20px; border-radius: 10px; font-size: 26px; background: #f5f5f5; color: #666; }
-.sub-item.sub-active { background: #1677ff; color: #fff; }
-.note-input { width: 100%; font-size: 30px; padding: 8px 0; }
-.submit-btn { background: #1677ff; color: #fff; text-align: center; padding: 24px; border-radius: 16px; font-size: 34px; font-weight: 600; margin-top: 30px; }
+.currency { font-size: 44rpx; font-weight: 800; color: #FF6B35; margin-right: 12rpx; }
+.amount-input { font-size: 44rpx; font-weight: 800; flex: 1; height: 64rpx; }
+
+/* 选择器 */
+.picker { display: flex; justify-content: space-between; align-items: center; font-size: 30rpx; padding: 8rpx 0; color: #1E293B; }
+.arrow { font-size: 32rpx; color: #CBD5E1; }
+.placeholder { color: #CBD5E1; }
+
+/* 子分类网格 */
+.sub-grid { display: flex; flex-wrap: wrap; gap: 12rpx; }
+.sub-item { padding: 12rpx 22rpx; border-radius: 14rpx; font-size: 26rpx; background: #F1F5F9; color: #64748B; font-weight: 500; transition: all 0.15s; }
+.sub-item.sub-active { background: #FF6B35; color: #fff; box-shadow: 0 2rpx 8rpx rgba(255,107,53,0.3); }
+
+/* 备注 */
+.note-input { width: 100%; font-size: 28rpx; padding: 8rpx 0; }
+
+/* 提交按钮 */
+.submit-btn { background: linear-gradient(135deg, #FF6B35, #FF8555); color: #fff; text-align: center; padding: 24rpx; border-radius: 18rpx; font-size: 32rpx; font-weight: 700; margin-top: 28rpx; box-shadow: 0 4rpx 16rpx rgba(255,107,53,0.3); }

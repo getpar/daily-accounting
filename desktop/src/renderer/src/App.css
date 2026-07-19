@@ -1,4 +1,4 @@
-/* 全局样式 */
+/* ===== 全局重置 ===== */
 * {
   margin: 0;
   padding: 0;
@@ -6,37 +6,265 @@
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue',
-    Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji';
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: #f5f5f5;
+  background-color: #F1F5F9;
+  color: #1E293B;
 }
 
 #root {
   min-height: 100vh;
 }
 
-/* 侧边栏菜单选中样式 */
-.ant-menu-item-selected {
+/* ===== 设计变量 ===== */
+:root {
+  --primary: #FF6B35;
+  --primary-light: #FFF0E8;
+  --primary-dark: #E55A2B;
+  --success: #10B981;
+  --success-light: #ECFDF5;
+  --danger: #EF4444;
+  --danger-light: #FEF2F2;
+  --warning: #F59E0B;
+  --warning-light: #FFFBEB;
+  --bg-page: #F1F5F9;
+  --bg-card: #FFFFFF;
+  --bg-sidebar: #0F172A;
+  --bg-sidebar-hover: #1E293B;
+  --bg-sidebar-active: rgba(255, 107, 53, 0.15);
+  --text-primary: #1E293B;
+  --text-secondary: #64748B;
+  --text-sidebar: #CBD5E1;
+  --text-sidebar-active: #FF6B35;
+  --border: #E2E8F0;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.07), 0 2px 4px -2px rgba(0,0,0,0.05);
+  --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.08), 0 4px 6px -4px rgba(0,0,0,0.04);
+  --shadow-xl: 0 20px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.04);
+  --radius-sm: 8px;
+  --radius: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+}
+
+/* ===== 滚动条美化 ===== */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
+}
+
+/* ===== Ant Design 组件微调 ===== */
+
+/* 卡片 */
+.ant-card {
+  border-radius: var(--radius-lg) !important;
+  box-shadow: var(--shadow-md) !important;
+  border: 1px solid var(--border) !important;
+  transition: box-shadow 0.2s ease;
+}
+.ant-card:hover {
+  box-shadow: var(--shadow-lg) !important;
+}
+.ant-card-head {
+  border-bottom: 1px solid var(--border) !important;
+  padding: 16px 20px !important;
+}
+.ant-card-body {
+  padding: 20px !important;
+}
+
+/* 按钮 */
+.ant-btn {
+  border-radius: var(--radius-sm) !important;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+.ant-btn-primary {
+  box-shadow: 0 2px 8px rgba(255, 107, 53, 0.3);
+}
+.ant-btn-primary:hover {
+  box-shadow: 0 4px 12px rgba(255, 107, 53, 0.4);
+  transform: translateY(-1px);
+}
+
+/* 输入框 */
+.ant-input, .ant-input-number, .ant-picker, .ant-select-selector {
+  border-radius: var(--radius-sm) !important;
+  border-color: var(--border) !important;
+  transition: all 0.2s ease;
+}
+.ant-input:focus, .ant-input-number-focused, .ant-picker-focused {
+  box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1) !important;
+}
+
+/* 表格 */
+.ant-table {
+  border-radius: var(--radius) !important;
+}
+.ant-table-thead > tr > th {
+  background: #F8FAFC !important;
+  color: var(--text-secondary) !important;
+  font-weight: 600 !important;
+  font-size: 12px !important;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 2px solid var(--border) !important;
+}
+
+/* 标签 */
+.ant-tag {
+  border-radius: 6px !important;
   font-weight: 500;
 }
 
-/* 金额样式 */
-.amount-text {
-  font-size: 18px;
-  font-weight: 600;
-  color: #ff4d4f;
+/* 弹窗 */
+.ant-modal-content {
+  border-radius: var(--radius-lg) !important;
+  overflow: hidden;
+}
+.ant-modal-header {
+  padding: 20px 24px !important;
+  border-bottom: 1px solid var(--border) !important;
+}
+.ant-modal-body {
+  padding: 24px !important;
+}
+.ant-modal-footer {
+  padding: 16px 24px !important;
+  border-top: 1px solid var(--border) !important;
 }
 
-.amount-text-large {
-  font-size: 36px;
+/* 选择器下拉 */
+.ant-select-dropdown, .ant-picker-dropdown {
+  border-radius: var(--radius) !important;
+  box-shadow: var(--shadow-xl) !important;
+}
+
+/* 统计数字 */
+.ant-statistic-title {
+  font-size: 13px !important;
+  color: var(--text-secondary) !important;
+  font-weight: 500;
+}
+.ant-statistic-content {
+  font-weight: 700 !important;
+}
+
+/* 进度条 */
+.ant-progress-bg {
+  border-radius: 100px !important;
+}
+
+/* 分段控制器 */
+.ant-segmented {
+  border-radius: var(--radius-sm) !important;
+  background: #F1F5F9 !important;
+  padding: 3px !important;
+}
+.ant-segmented-item {
+  border-radius: 6px !important;
+}
+.ant-segmented-item-selected {
+  box-shadow: var(--shadow-sm) !important;
+}
+
+/* 菜单（侧边栏内部） */
+.ant-menu-item-selected {
+  font-weight: 600 !important;
+}
+
+/* 警告横幅 */
+.ant-alert {
+  border-radius: var(--radius) !important;
+  border: none !important;
+}
+
+/* ===== 通用工具类 ===== */
+
+/* 渐变卡片 - 支出 */
+.card-gradient-expense {
+  background: linear-gradient(135deg, #FFF0E8 0%, #FFFFFF 100%) !important;
+  border: 1px solid rgba(255, 107, 53, 0.2) !important;
+}
+
+/* 渐变卡片 - 收入 */
+.card-gradient-income {
+  background: linear-gradient(135deg, #ECFDF5 0%, #FFFFFF 100%) !important;
+  border: 1px solid rgba(16, 185, 129, 0.2) !important;
+}
+
+/* 渐变卡片 - 结余 */
+.card-gradient-balance {
+  background: linear-gradient(135deg, #EFF6FF 0%, #FFFFFF 100%) !important;
+  border: 1px solid rgba(59, 130, 246, 0.2) !important;
+}
+
+/* 金额大字 */
+.amount-hero {
+  font-size: 32px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.5px;
+}
+.amount-large {
+  font-size: 20px;
   font-weight: 700;
-  color: #ff4d4f;
+  font-variant-numeric: tabular-nums;
+}
+.amount-medium {
+  font-size: 16px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
 }
 
-/* 统计卡片 */
-.stat-card {
+/* 分类图标圆形容器 */
+.category-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+  margin-right: 6px;
+}
+
+/* 页面标题 */
+.page-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* 统计小卡片 */
+.stat-mini-card {
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  padding: 16px 20px;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border);
+}
+
+/* 空状态 */
+.empty-state {
   text-align: center;
-  padding: 16px;
+  padding: 60px 20px;
+  color: var(--text-secondary);
+}
+.empty-state-icon {
+  font-size: 56px;
+  margin-bottom: 16px;
+  opacity: 0.4;
 }

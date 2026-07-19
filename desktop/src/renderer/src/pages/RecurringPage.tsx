@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Card, Table, Tag, Button, Modal, Form, InputNumber, Select, Input, DatePicker, Switch, Typography, Popconfirm, message, Space } from 'antd'
-import { PlusOutlined, DeleteOutlined } from '@ant-design/icons'
+import { PlusOutlined, DeleteOutlined, SyncOutlined } from '@ant-design/icons'
 import dayjs from 'dayjs'
 
 const { Title, Text } = Typography
@@ -60,55 +60,136 @@ function RecurringPage(): JSX.Element {
   const subs = selectedCat ? categories.find(c => c.category_key === selectedCat)?.subcategories.map(s => ({ value: s.subcategory_key, label: s.subcategory_name })) || [] : []
 
   const columns = [
-    { title: '类型', dataIndex: 'type', key: 'type', width: 70, render: (t: string) => <Tag color={t === 'income' ? 'green' : 'red'}>{t === 'income' ? '收入' : '支出'}</Tag> },
-    { title: '金额', dataIndex: 'amount', key: 'amount', width: 100, render: (a: number) => <span style={{ fontWeight: 600 }}>¥{a.toFixed(2)}</span> },
-    { title: '分类', key: 'cat', width: 170, render: (_: any, r: any) => <span><Tag color="blue">{r.category_name}</Tag><Tag>{r.subcategory_name}</Tag></span> },
-    { title: '周期', dataIndex: 'cycle', key: 'cycle', width: 80, render: (c: string) => ({ daily: '每天', weekly: '每周', monthly: '每月', yearly: '每年' } as any)[c] || c },
+    {
+      title: '类型', dataIndex: 'type', key: 'type', width: 70,
+      render: (t: string) => <Tag color={t === 'income' ? 'success' : 'error'} style={{ borderRadius: 6 }}>{t === 'income' ? '收入' : '支出'}</Tag>,
+    },
+    {
+      title: '金额', dataIndex: 'amount', key: 'amount', width: 110,
+      render: (a: number) => <span style={{ fontWeight: 700, fontSize: 15, fontVariantNumeric: 'tabular-nums' }}>¥{a.toFixed(2)}</span>,
+    },
+    {
+      title: '分类', key: 'cat', width: 170,
+      render: (_: any, r: any) => (
+        <Space size={4}>
+          <Tag color="orange" style={{ borderRadius: 6 }}>{r.category_name}</Tag>
+          <Tag style={{ borderRadius: 6 }}>{r.subcategory_name}</Tag>
+        </Space>
+      ),
+    },
+    {
+      title: '周期', dataIndex: 'cycle', key: 'cycle', width: 80,
+      render: (c: string) => {
+        const map: Record<string, { label: string; color: string }> = {
+          daily: { label: '每天', color: 'blue' },
+          weekly: { label: '每周', color: 'purple' },
+          monthly: { label: '每月', color: 'orange' },
+          yearly: { label: '每年', color: 'cyan' },
+        }
+        const m = map[c] || { label: c, color: 'default' }
+        return <Tag color={m.color} style={{ borderRadius: 6 }}>{m.label}</Tag>
+      },
+    },
     { title: '下次日期', dataIndex: 'next_date', key: 'next_date', width: 110 },
-    { title: '备注', dataIndex: 'note', key: 'note', ellipsis: true },
-    { title: '启用', key: 'active', width: 60, render: (_: any, r: any) => <Switch size="small" checked={!!r.is_active} onChange={v => handleToggle(r.id, v)} /> },
-    { title: '操作', key: 'act', width: 160, render: (_: any, r: any) => (
-      <Space>
-        <Button type="link" size="small" onClick={() => handleExecute(r)}>立即记录</Button>
-        <Popconfirm title="确定删除？" onConfirm={() => handleDelete(r.id)}><Button type="link" danger size="small" icon={<DeleteOutlined />} /></Popconfirm>
-      </Space>
-    )},
+    {
+      title: '备注', dataIndex: 'note', key: 'note', ellipsis: true,
+      render: (n: string) => <Text type="secondary" style={{ fontSize: 13 }}>{n || '-'}</Text>,
+    },
+    {
+      title: '启用', key: 'active', width: 60,
+      render: (_: any, r: any) => <Switch size="small" checked={!!r.is_active} onChange={v => handleToggle(r.id, v)} />,
+    },
+    {
+      title: '操作', key: 'act', width: 160,
+      render: (_: any, r: any) => (
+        <Space size={0}>
+          <Button type="link" size="small" onClick={() => handleExecute(r)} style={{ color: '#FF6B35' }}>立即记录</Button>
+          <Popconfirm title="确定删除？" onConfirm={() => handleDelete(r.id)}>
+            <Button type="link" danger size="small" icon={<DeleteOutlined />} />
+          </Popconfirm>
+        </Space>
+      ),
+    },
   ]
 
   return (
     <div>
-      <Title level={3} style={{ marginBottom: 24 }}>🔁 周期账单</Title>
-      <Space direction="vertical" style={{ marginBottom: 16, width: '100%' }}>
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => { setModalOpen(true); setSelectedCat(null); form.resetFields() }}>添加周期账单</Button>
-        <Text type="secondary">周期性账单会在到期日自动生成记录，让固定开销不用手动记</Text>
-      </Space>
+      <div style={{ marginBottom: 20 }}>
+        <Text type="secondary" style={{ fontSize: 12, fontWeight: 500, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+          周期账单
+        </Text>
+        <div style={{ fontSize: 22, fontWeight: 700, color: '#1E293B' }}>🔁 定期收支</div>
+      </div>
+
+      <div style={{ marginBottom: 20 }}>
+        <Space direction="vertical" size={8}>
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={() => { setModalOpen(true); setSelectedCat(null); form.resetFields() }}
+            style={{ borderRadius: 10, height: 40 }}
+          >
+            添加周期账单
+          </Button>
+          <Text type="secondary" style={{ fontSize: 13 }}>
+            房租、订阅等固定账单，到期手动触发记录，让固定开销不用每次都手动记
+          </Text>
+        </Space>
+      </div>
 
       <Card>
         <Table columns={columns} dataSource={bills} rowKey="id" pagination={false} size="middle" />
       </Card>
 
-      <Modal title="添加周期账单" open={modalOpen} onOk={handleAdd} onCancel={() => setModalOpen(false)} okText="添加" width={500}>
+      <Modal
+        title="添加周期账单"
+        open={modalOpen}
+        onOk={handleAdd}
+        onCancel={() => setModalOpen(false)}
+        okText="添加"
+        cancelText="取消"
+        width={500}
+      >
         <Form form={form} layout="vertical" style={{ marginTop: 16 }} initialValues={{ type: 'expense', cycle: 'monthly', next_date: dayjs() }}>
           <Form.Item label="类型" name="type">
-            <Select options={[{ value: 'expense', label: '💰 支出' }, { value: 'income', label: '💵 收入' }]} />
+            <Select options={[
+              { value: 'expense', label: '💰 支出' },
+              { value: 'income', label: '💵 收入' },
+            ]} />
           </Form.Item>
           <Form.Item label="金额" name="amount" rules={[{ required: true }, { type: 'number', min: 0.01 }]}>
-            <InputNumber prefix="¥" style={{ width: '100%' }} size="large" precision={2} />
+            <InputNumber prefix="¥" style={{ width: '100%', borderRadius: 10 }} size="large" precision={2} />
           </Form.Item>
           <Form.Item label="周期" name="cycle">
-            <Select options={[{ value: 'monthly', label: '每月' }, { value: 'weekly', label: '每周' }, { value: 'daily', label: '每天' }, { value: 'yearly', label: '每年' }]} />
+            <Select options={[
+              { value: 'monthly', label: '📅 每月' },
+              { value: 'weekly', label: '📆 每周' },
+              { value: 'daily', label: '☀️ 每天' },
+              { value: 'yearly', label: '🎯 每年' },
+            ]} />
           </Form.Item>
           <Form.Item label="下次日期" name="next_date" rules={[{ required: true }]}>
-            <DatePicker style={{ width: '100%' }} allowClear={false} />
+            <DatePicker style={{ width: '100%', borderRadius: 10 }} allowClear={false} />
           </Form.Item>
           <Form.Item label="一级分类" name="category_key" rules={[{ required: true }]}>
-            <Select placeholder="选择大类" size="large" onChange={v => { setSelectedCat(v); form.setFieldValue('subcategory_key', undefined) }}
-              options={categories.map(c => ({ value: c.category_key, label: c.category_name }))} />
+            <Select
+              placeholder="选择大类"
+              size="large"
+              onChange={v => { setSelectedCat(v); form.setFieldValue('subcategory_key', undefined) }}
+              options={categories.map(c => ({ value: c.category_key, label: c.category_name }))}
+            />
           </Form.Item>
           <Form.Item label="二级分类" name="subcategory_key" rules={[{ required: true }]}>
-            <Select placeholder={selectedCat ? '选择小类' : '请先选择大类'} size="large" disabled={!selectedCat} options={subs} />
+            <Select
+              placeholder={selectedCat ? '选择小类' : '请先选择大类'}
+              size="large"
+              disabled={!selectedCat}
+              options={subs}
+            />
           </Form.Item>
-          <Form.Item label="备注" name="note"><Input placeholder="例如：房租、Netflix订阅" /></Form.Item>
+          <Form.Item label="备注" name="note">
+            <Input placeholder="例如：房租、Netflix订阅" style={{ borderRadius: 10 }} />
+          </Form.Item>
         </Form>
       </Modal>
     </div>

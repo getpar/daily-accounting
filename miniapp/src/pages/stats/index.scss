@@ -1,22 +1,32 @@
-.wrap { padding: 20px; padding-bottom: 100px; }
-.type-switch { display: flex; gap: 16px; margin-bottom: 20px; }
-.type-btn { flex: 1; text-align: center; padding: 16px; border-radius: 14px; font-size: 28px; background: #fff; color: #666; }
-.type-btn.active.expense { background: #ff4d4f; color: #fff; font-weight: 600; }
-.type-btn.active.income { background: #52c41a; color: #fff; font-weight: 600; }
-.card { background: #fff; border-radius: 16px; padding: 24px; margin-bottom: 20px; }
-.total-label { font-size: 26px; color: #999; display: block; }
-.total-value { font-size: 56px; font-weight: 700; display: block; margin: 8px 0; }
-.total-sub { font-size: 24px; color: #999; }
-.section-title { font-size: 30px; font-weight: 600; display: block; margin-bottom: 20px; }
-.stat-row { margin-bottom: 20px; }
-.stat-row-header { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 26px; }
-.stat-name { color: #333; }
-.stat-amount { color: #666; }
-.bar { height: 10px; background: #f0f0f0; border-radius: 5px; overflow: hidden; }
-.bar-fill { height: 100%; border-radius: 5px; transition: width 0.3s; }
-.trend-row { display: flex; align-items: center; margin-bottom: 12px; gap: 12px; }
-.trend-date { font-size: 24px; color: #999; width: 70px; }
-.trend-amount { font-size: 24px; color: #333; width: 110px; text-align: right; }
-.trend-bar { flex: 1; height: 8px; background: #f0f0f0; border-radius: 4px; overflow: hidden; }
-.trend-fill { height: 100%; border-radius: 4px; background: #1677ff; }
-.empty { text-align: center; padding: 80px 0; color: #ccc; font-size: 28px; }
+.wrap { padding: 24rpx; padding-bottom: 100rpx; }
+
+/* 类型切换 */
+.type-switch { display: flex; gap: 16rpx; margin-bottom: 20rpx; background: #F1F5F9; border-radius: 18rpx; padding: 6rpx; }
+.type-btn { flex: 1; text-align: center; padding: 16rpx; border-radius: 14rpx; font-size: 28rpx; color: #94A3B8; font-weight: 500; }
+.type-btn.active.expense { background: #EF4444; color: #fff; font-weight: 700; box-shadow: 0 2rpx 8rpx rgba(239,68,68,0.25); }
+.type-btn.active.income { background: #10B981; color: #fff; font-weight: 700; box-shadow: 0 2rpx 8rpx rgba(16,185,129,0.25); }
+
+/* 合计卡片 */
+.card { background: #fff; border-radius: 24rpx; padding: 24rpx; margin-bottom: 20rpx; box-shadow: 0 2rpx 12rpx rgba(0,0,0,0.04); }
+.total-label { font-size: 26rpx; color: #94A3B8; display: block; font-weight: 500; }
+.total-value { font-size: 52rpx; font-weight: 800; display: block; margin: 8rpx 0; font-variant-numeric: tabular-nums; }
+.total-sub { font-size: 24rpx; color: #94A3B8; }
+
+/* 分类占比 */
+.section-title { font-size: 30rpx; font-weight: 700; display: block; margin-bottom: 18rpx; color: #1E293B; }
+.stat-row { margin-bottom: 18rpx; }
+.stat-row:last-child { margin-bottom: 0; }
+.stat-row-header { display: flex; justify-content: space-between; margin-bottom: 8rpx; font-size: 26rpx; }
+.stat-name { color: #1E293B; font-weight: 500; }
+.stat-amount { color: #64748B; }
+.bar { height: 12rpx; background: #F1F5F9; border-radius: 6rpx; overflow: hidden; }
+.bar-fill { height: 100%; border-radius: 6rpx; transition: width 0.3s ease; }
+
+/* 每日趋势 */
+.trend-row { display: flex; align-items: center; margin-bottom: 14rpx; gap: 12rpx; }
+.trend-row:last-child { margin-bottom: 0; }
+.trend-date { font-size: 24rpx; color: #94A3B8; width: 80rpx; }
+.trend-amount { font-size: 24rpx; color: #1E293B; width: 120rpx; text-align: right; font-weight: 500; font-variant-numeric: tabular-nums; }
+.trend-bar { flex: 1; height: 10rpx; background: #F1F5F9; border-radius: 5rpx; overflow: hidden; }
+.trend-fill { height: 100%; border-radius: 5rpx; background: linear-gradient(90deg, #FF6B35, #FF8555); }
+.empty { text-align: center; padding: 80rpx 0; color: #CBD5E1; font-size: 28rpx; }

@@ -13,6 +13,13 @@ function formatAmount(val: number): string {
   return abs.toFixed(2)
 }
 
+// 分类 emoji
+const catEmoji: Record<string, string> = {
+  food: '🍜', transport: '🚗', shopping: '🛒', housing: '🏠',
+  entertainment: '🎮', medical: '💊', education: '📚', social: '🎁',
+  finance: '💰', other: '📦',
+}
+
 export default function Index(): JSX.Element {
   const [month, setMonth] = useState(THIS_MONTH)
   const [exp, setExp] = useState(0)
@@ -21,11 +28,9 @@ export default function Index(): JSX.Element {
   const [budget, setBudget] = useState(0)
   const [showBudget, setShowBudget] = useState(false)
   const [budgetInput, setBudgetInput] = useState('')
-  const [showMonthPicker, setShowMonthPicker] = useState(false)
 
   const isCurrentMonth = month === THIS_MONTH
 
-  // 月份选项
   const monthOptions = useMemo(() => {
     const opts = []
     for (let i = 0; i < 12; i++) {
@@ -40,7 +45,7 @@ export default function Index(): JSX.Element {
     const [expVal, incVal, records] = await Promise.all([
       getMonthTotal(month, 'expense'), getMonthTotal(month, 'income'), getRecords(),
     ])
-    setExp(expVal); setInc(incVal); setRecent(records.filter((r) => r.date.startsWith(month)).slice(0, 5))
+    setExp(expVal); setInc(incVal); setRecent(records.filter((r) => r.date.startsWith(month)).slice(0, 8))
     if (isCurrentMonth) {
       const b = await getBudget()
       setBudget(b)
@@ -60,78 +65,138 @@ export default function Index(): JSX.Element {
     }
   }
 
+  async function clearAll(): Promise<void> {
+    Taro.showModal({
+      title: '清除所有数据？',
+      content: '将删除全部记账记录和预算',
+      success: (res) => {
+        if (res.confirm) { Taro.clearStorageSync(); setExp(0); setInc(0); setRecent([]); setBudget(0); Taro.eventCenter.trigger('dataChanged') }
+      },
+    })
+  }
+
   const balance = inc - exp
   const pct = budget > 0 ? Math.round((exp / budget) * 100) : 0
   const over = budget > 0 && exp > budget
 
+  // 预算颜色
+  const barColor = over ? '#FEE2E2' : pct >= 80 ? '#FEF3C7' : '#D1FAE5'
+
   return (
     <View className='wrap'>
-      <View className='header'>
-        <Text className='header-title'>每日小记</Text>
-        <Picker mode='selector' range={monthOptions} onChange={(e) => { setMonth(monthOptions[Number(e.detail.value)]); setShowMonthPicker(false) }}>
-          <View className='header-month' onClick={() => setShowMonthPicker(true)}>
-            <Text>{month}</Text>
-            <Text className='month-arrow'>▼</Text>
-          </View>
-        </Picker>
-      </View>
+      {/* ====== 深色头部区域 ====== */}
+      <View className='hero'>
+        <View className='hero-glow1' />
+        <View className='hero-glow2' />
+        {/* 顶栏 */}
+        <View className='hero-top'>
+          <Text className='hero-brand'>📒 每日小记</Text>
+          <Picker mode='selector' range={monthOptions} onChange={(e) => setMonth(monthOptions[Number(e.detail.value)])}>
+            <View className='hero-month'>
+              <Text>{month}</Text>
+              <Text className='hero-arrow'>▼</Text>
+            </View>
+          </Picker>
+        </View>
 
-      <View className='stats'>
-        <View className='stat'>
-          <Text className='stat-label'>支出</Text>
-          <Text className='stat-val red'>¥{formatAmount(exp)}</Text>
-        </View>
-        <View className='stat'>
-          <Text className='stat-label'>收入</Text>
-          <Text className='stat-val green'>¥{formatAmount(inc)}</Text>
-        </View>
-      </View>
-      <View className='stats-single'>
-        <View className='stat' style='border:none'>
-          <Text className='stat-label'>结余</Text>
-          <Text className={`stat-val ${balance >= 0 ? 'green' : 'red'}`}>
-            ¥{balance.toFixed(2)}
+        {/* 结余大字 */}
+        <View className='hero-balance'>
+          <Text className='hero-balance-label'>本月结余</Text>
+          <Text className={`hero-balance-value ${balance >= 0 ? 'green' : 'red'}`}>
+            {balance >= 0 ? '+' : '-'}¥{formatAmount(Math.abs(balance))}
           </Text>
         </View>
-      </View>
 
-      {isCurrentMonth && budget > 0 && (
-        <View className='card'>
-          <View className='card-row'>
-            <Text className='card-label'>预算 {pct > 999 ? '已超支' : `${pct}%`}</Text>
-            <Text className='card-sub'>预算 ¥{formatAmount(budget)} / 已用 ¥{formatAmount(exp)}</Text>
+        {/* 收支双栏 */}
+        <View className='hero-row'>
+          <View className='hero-stat' onClick={() => Taro.navigateTo({ url: '/pages/history/index' })}>
+            <Text className='hero-stat-label'>📤 支出</Text>
+            <Text className='hero-stat-val red'>¥{formatAmount(exp)}</Text>
           </View>
-          <View className='bar'><View className='bar-fill' style={`width:${Math.min(pct, 100)}%;background:${over ? '#ff4d4f' : pct >= 80 ? '#faad14' : '#52c41a'}`} /></View>
-        </View>
-      )}
-
-      <View className='card'>
-        <View className='card-row'>
-          <Text className='card-label'>最近记录</Text>
-          <View className='card-actions'>
-            {isCurrentMonth && <Text className='link' onClick={() => { setShowBudget(true); setBudgetInput(budget > 0 ? String(Math.round(budget)) : '') }}>预算</Text>}
-            <Text className='link' onClick={() => Taro.navigateTo({ url: '/pages/categories/index' })}>分类</Text>
-            <Text className='link danger' onClick={() => {
-              Taro.showModal({ title: '清除所有数据？', content: '将删除全部记账记录和预算', success: (res) => {
-                if (res.confirm) { Taro.clearStorageSync(); setExp(0); setInc(0); setRecent([]); setBudget(0); Taro.eventCenter.trigger('dataChanged') }
-              }})
-            }}>清数据</Text>
+          <View className='hero-divider' />
+          <View className='hero-stat'>
+            <Text className='hero-stat-label'>📥 收入</Text>
+            <Text className='hero-stat-val green'>¥{formatAmount(inc)}</Text>
           </View>
         </View>
-        {recent.length === 0 ? (
-          <View className='empty'><Text>暂无记录</Text></View>
-        ) : recent.map((r) => (
-          <View key={r.id} className='record-item'>
-            <View className='record-left'>
-              <Text className='tag blue'>{r.categoryName}</Text>
-              <Text className='tag'>{r.subcategoryName}</Text>
-              <Text className='record-note'>{r.date}{r.note ? ' ' + r.note : ''}</Text>
+
+        {/* 预算条 */}
+        {isCurrentMonth && budget > 0 && (
+          <View className='hero-budget'>
+            <View className='hero-budget-header'>
+              <Text className='hero-budget-label'>{over ? '⚠️ 已超支' : `月度预算 ${pct}%`}</Text>
+              <Text className='hero-budget-num'>¥{formatAmount(budget)}</Text>
             </View>
-            <Text className={`record-amount ${r.type === 'income' ? 'green' : 'red'}`}>{r.type === 'income' ? '+' : '-'}¥{r.amount.toFixed(2)}</Text>
+            <View className='hero-bar'>
+              <View className='hero-bar-fill' style={`width:${Math.min(pct, 100)}%;background:${barColor}`} />
+            </View>
           </View>
-        ))}
+        )}
       </View>
 
+      {/* ====== 快捷操作 ====== */}
+      <View className='actions'>
+        <View className='action-item' onClick={() => Taro.switchTab({ url: '/pages/add/index' })}>
+          <View className='action-icon action-add'>✏️</View>
+          <Text className='action-text'>记一笔</Text>
+        </View>
+        <View className='action-item' onClick={() => { setShowBudget(true); setBudgetInput(budget > 0 ? String(Math.round(budget)) : '') }}>
+          <View className='action-icon action-budget'>🎯</View>
+          <Text className='action-text'>{budget > 0 ? '调预算' : '设预算'}</Text>
+        </View>
+        <View className='action-item' onClick={() => Taro.navigateTo({ url: '/pages/categories/index' })}>
+          <View className='action-icon action-cat'>🏷️</View>
+          <Text className='action-text'>分类</Text>
+        </View>
+        <View className='action-item' onClick={() => Taro.switchTab({ url: '/pages/stats/index' })}>
+          <View className='action-icon action-stats'>📊</View>
+          <Text className='action-text'>统计</Text>
+        </View>
+      </View>
+
+      {/* ====== 最近记录 ====== */}
+      <View className='section'>
+        <View className='section-header'>
+          <Text className='section-title'>📋 最近记录</Text>
+          <Text className='section-more' onClick={() => Taro.switchTab({ url: '/pages/history/index' })}>全部 ›</Text>
+        </View>
+
+        {recent.length === 0 ? (
+          <View className='empty'>
+            <Text className='empty-icon'>📝</Text>
+            <Text>暂无记录，去记一笔吧</Text>
+          </View>
+        ) : (
+          <View className='record-list'>
+            {recent.map((r, i) => (
+              <View key={r.id} className={`record-card ${i === recent.length - 1 ? 'last' : ''}`}>
+                <View className='record-icon' style={`background:${r.type === 'income' ? '#ECFDF5' : '#FFF0E8'}`}>
+                  <Text>{catEmoji[r.categoryKey] || '📌'}</Text>
+                </View>
+                <View className='record-body'>
+                  <View className='record-top'>
+                    <Text className='record-cat'>{r.subcategoryName}</Text>
+                    <Text className={`record-amt ${r.type === 'income' ? 'green' : 'red'}`}>
+                      {r.type === 'income' ? '+' : '-'}¥{r.amount.toFixed(2)}
+                    </Text>
+                  </View>
+                  <View className='record-btm'>
+                    <Text className='record-date'>{r.date}</Text>
+                    {r.note ? <Text className='record-note'>· {r.note}</Text> : null}
+                  </View>
+                </View>
+              </View>
+            ))}
+          </View>
+        )}
+      </View>
+
+      {/* 清除数据 */}
+      <View className='clear-btn' onClick={clearAll}>
+        <Text className='clear-text'>清除所有数据</Text>
+      </View>
+
+      {/* ====== 预算弹窗 ====== */}
       {showBudget && (
         <View className='modal' onClick={() => setShowBudget(false)}>
           <View className='modal-box' onClick={(e) => e.stopPropagation()}>
@@ -147,6 +212,8 @@ export default function Index(): JSX.Element {
           </View>
         </View>
       )}
+
+      <View style='height:20rpx' />
     </View>
   )
 }

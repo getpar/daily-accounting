@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react'
 import { Card, Form, InputNumber, Select, Input, DatePicker, Button, Typography, message, Segmented } from 'antd'
-import { SaveOutlined } from '@ant-design/icons'
+import { SaveOutlined, ArrowLeftOutlined } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
 import dayjs from 'dayjs'
 
-const { Title } = Typography
+const { Title, Text } = Typography
 
 interface CategoryGroup { category_key: string; category_name: string; subcategories: { subcategory_key: string; subcategory_name: string }[] }
 
@@ -45,31 +45,137 @@ function AddExpensePage(): JSX.Element {
   const subs = selectedCat ? categories.find(c => c.category_key === selectedCat)?.subcategories.map(s => ({ value: s.subcategory_key, label: s.subcategory_name })) || [] : []
 
   return (
-    <div style={{ maxWidth: 600, margin: '0 auto' }}>
-      <Title level={3} style={{ marginBottom: 24 }}>✏️ 记一笔</Title>
-      <Card>
-        <Form form={form} layout="vertical" onFinish={onFinish} initialValues={{ record_date: dayjs() }}>
-          <Form.Item label="类型">
-            <Segmented block size="large" value={recordType} onChange={v => setRecordType(v as string)}
-              options={[{ label: '💰 支出', value: 'expense' }, { label: '💵 收入', value: 'income' }]} />
+    <div style={{ maxWidth: 560, margin: '0 auto' }}>
+      {/* 页面标题 */}
+      <div style={{ marginBottom: 24, display: 'flex', alignItems: 'center', gap: 16 }}>
+        <Button
+          type="text"
+          icon={<ArrowLeftOutlined />}
+          onClick={() => navigate('/home')}
+          style={{ borderRadius: 10, width: 40, height: 40, fontSize: 16 }}
+        />
+        <div>
+          <Text type="secondary" style={{ fontSize: 12, fontWeight: 500, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+            新增记录
+          </Text>
+          <div style={{ fontSize: 22, fontWeight: 700, color: '#1E293B' }}>✏️ 记一笔</div>
+        </div>
+      </div>
+
+      {/* 类型切换 — 浮出效果 */}
+      <div style={{
+        background: '#F1F5F9',
+        borderRadius: 14,
+        padding: 4,
+        marginBottom: 24,
+      }}>
+        <Segmented
+          block
+          size="large"
+          value={recordType}
+          onChange={v => setRecordType(v as string)}
+          options={[
+            { label: '💰 支出', value: 'expense' },
+            { label: '💵 收入', value: 'income' },
+          ]}
+          style={{ background: 'transparent' }}
+        />
+      </div>
+
+      {/* 主表单卡片 */}
+      <Card
+        style={{
+          borderRadius: 16,
+          boxShadow: '0 4px 16px rgba(0,0,0,0.06)',
+          border: '1px solid #E2E8F0',
+        }}
+        styles={{ body: { padding: 28 } }}
+      >
+        <Form form={form} layout="vertical" onFinish={onFinish} initialValues={{ record_date: dayjs() }} size="large">
+          {/* 金额 — 最突出 */}
+          <Form.Item
+            label={<span style={{ fontSize: 13, fontWeight: 600 }}>金额</span>}
+            name="amount"
+            rules={[{ required: true, message: '请输入金额' }, { type: 'number', min: 0.01 }]}
+          >
+            <InputNumber
+              prefix={<span style={{ color: '#94A3B8', fontSize: 22, fontWeight: 600 }}>¥</span>}
+              placeholder="0.00"
+              style={{ width: '100%', height: 56 }}
+              precision={2}
+              min={0.01}
+              controls={false}
+            />
           </Form.Item>
-          <Form.Item label="金额" name="amount" rules={[{ required: true, message: '请输入金额' }, { type: 'number', min: 0.01 }]}>
-            <InputNumber prefix="¥" placeholder="0.00" style={{ width: '100%' }} size="large" precision={2} min={0.01} />
+
+          {/* 日期 */}
+          <Form.Item
+            label={<span style={{ fontSize: 13, fontWeight: 600 }}>日期</span>}
+            name="record_date"
+            rules={[{ required: true }]}
+          >
+            <DatePicker style={{ width: '100%', height: 44 }} allowClear={false} />
           </Form.Item>
-          <Form.Item label="日期" name="record_date" rules={[{ required: true }]}>
-            <DatePicker style={{ width: '100%' }} size="large" allowClear={false} />
+
+          {/* 分类 — 两列 */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+            <Form.Item
+              label={<span style={{ fontSize: 13, fontWeight: 600 }}>一级分类</span>}
+              name="category_key"
+              rules={[{ required: true }]}
+            >
+              <Select
+                placeholder="选择大类"
+                onChange={v => { setSelectedCat(v); form.setFieldValue('subcategory_key', undefined) }}
+                options={categories.map(c => ({ value: c.category_key, label: c.category_name }))}
+              />
+            </Form.Item>
+
+            <Form.Item
+              label={<span style={{ fontSize: 13, fontWeight: 600 }}>二级分类</span>}
+              name="subcategory_key"
+              rules={[{ required: true }]}
+            >
+              <Select
+                placeholder={selectedCat ? '选择小类' : '先选大类'}
+                disabled={!selectedCat}
+                options={subs}
+              />
+            </Form.Item>
+          </div>
+
+          {/* 备注 */}
+          <Form.Item
+            label={<span style={{ fontSize: 13, fontWeight: 600 }}>备注</span>}
+            name="note"
+          >
+            <Input.TextArea
+              placeholder="写点什么…"
+              rows={3}
+              maxLength={200}
+              showCount
+              style={{ borderRadius: 10 }}
+            />
           </Form.Item>
-          <Form.Item label="一级分类" name="category_key" rules={[{ required: true }]}>
-            <Select placeholder="选择大类" size="large" onChange={v => { setSelectedCat(v); form.setFieldValue('subcategory_key', undefined) }}
-              options={categories.map(c => ({ value: c.category_key, label: c.category_name }))} />
-          </Form.Item>
-          <Form.Item label="二级分类" name="subcategory_key" rules={[{ required: true }]}>
-            <Select placeholder={selectedCat ? '选择小类' : '请先选择大类'} size="large" disabled={!selectedCat} options={subs} />
-          </Form.Item>
-          <Form.Item label="备注" name="note">
-            <Input.TextArea placeholder="可选" rows={3} maxLength={200} showCount />
-          </Form.Item>
-          <Button type="primary" htmlType="submit" icon={<SaveOutlined />} loading={loading} size="large" block>保存记录</Button>
+
+          {/* 提交按钮 */}
+          <Button
+            type="primary"
+            htmlType="submit"
+            icon={<SaveOutlined />}
+            loading={loading}
+            size="large"
+            block
+            style={{
+              height: 50,
+              fontSize: 16,
+              fontWeight: 600,
+              borderRadius: 12,
+              marginTop: 8,
+            }}
+          >
+            保存记录
+          </Button>
         </Form>
       </Card>
     </div>
