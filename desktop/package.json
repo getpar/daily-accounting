@@ -12,6 +12,7 @@
   "dependencies": {
     "@ant-design/charts": "^2.6.7",
     "@ant-design/icons": "^5.5.0",
+    "@cloudbase/js-sdk": "^3.6.3",
     "@types/xlsx": "^0.0.35",
     "antd": "^5.22.0",
     "dayjs": "^1.11.13",

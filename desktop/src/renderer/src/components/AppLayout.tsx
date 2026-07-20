@@ -1,11 +1,14 @@
 import { useState, useEffect } from 'react'
 import { Outlet, useNavigate, useLocation } from 'react-router-dom'
-import { Layout, Menu, Typography, Button, Switch, message, Modal } from 'antd'
+import { Layout, Menu, Typography, Button, Switch, message, Modal, Input, Space } from 'antd'
 import {
   HomeOutlined, PlusCircleOutlined, UnorderedListOutlined, BarChartOutlined,
   TagsOutlined, SyncOutlined, SunOutlined, MoonOutlined,
   DownloadOutlined, UploadOutlined, ThunderboltOutlined, CloudOutlined,
 } from '@ant-design/icons'
+import {
+  initCloud, isConnected, getEnvId, performSync, disconnect, CloudRecord,
+} from '../services/cloudbase'
 
 const { Sider, Content } = Layout
 
@@ -26,6 +29,8 @@ function AppLayout(): JSX.Element {
   const [shortcutInput, setShortcutInput] = useState('')
   const [cloudEnabled, setCloudEnabled] = useState(false)
   const [syncing, setSyncing] = useState(false)
+  const [cloudModalOpen, setCloudModalOpen] = useState(false)
+  const [cloudEnvId, setCloudEnvId] = useState('')
   const navigate = useNavigate()
   const location = useLocation()
 
@@ -104,27 +109,102 @@ function AppLayout(): JSX.Element {
   }
 
   async function loadCloudStatus(): Promise<void> {
-    try {
-      const status = await window.electronAPI.getCloudStatus()
-      setCloudEnabled(status.enabled)
-    } catch { /* ignore */ }
+    // 检查 localStorage 中是否保存了 envId 并且已连接
+    const savedEnvId = localStorage.getItem('cloud_envId')
+    if (savedEnvId) {
+      setCloudEnvId(savedEnvId)
+      try {
+        const ok = await initCloud(savedEnvId)
+        setCloudEnabled(ok)
+      } catch { /* ignore */ }
+    }
   }
 
   async function handleSync(): Promise<void> {
     if (syncing) return
+
+    // 如果未连接，打开配置弹窗
+    if (!isConnected()) {
+      setCloudModalOpen(true)
+      return
+    }
+
     setSyncing(true)
     try {
-      const result = await window.electronAPI.cloudSync()
+      // 1. 拉取所有本地记录
+      const allLocal = await window.electronAPI.exportAll()
+      const localRecords = allLocal.map((r: any) => ({
+        type: r['类型'] === '收入' ? 'income' : 'expense',
+        amount: Number(r['金额']) || 0,
+        categoryKey: '',  // 从导出数据中提取
+        categoryName: r['一级分类'] || '',
+        subcategoryKey: '',
+        subcategoryName: r['二级分类'] || '',
+        note: r['备注'] || '',
+        date: r['日期'] || '',
+      }))
+
+      // 2. 执行同步
+      const { result, newCloudRecords } = await performSync(localRecords)
+
       if (result.success) {
-        message.success(`同步完成：上传 ${result.uploaded} 条，下载 ${result.downloaded} 条`)
+        // 3. 将云端新记录写入本地 SQLite
+        let imported = 0
+        for (const cr of newCloudRecords) {
+          try {
+            await window.electronAPI.addRecord({
+              type: cr.type || 'expense',
+              amount: cr.amount,
+              category_key: cr.categoryKey,
+              subcategory_key: cr.subcategoryKey,
+              note: cr.note || '',
+              record_date: cr.date,
+            })
+            imported++
+          } catch { /* skip duplicates */ }
+        }
+
+        if (result.uploaded === 0 && imported === 0) {
+          message.success('数据已是最新，无需同步')
+        } else {
+          message.success(`同步完成：上传 ${result.uploaded} 条，下载 ${imported} 条`)
+        }
       } else {
-        message.warning(result.error || '同步暂不可用（等待 CloudBase 环境激活）')
+        message.warning(result.error || '同步失败，请检查网络和环境 ID')
       }
-    } catch {
-      message.error('同步失败')
+    } catch (e: any) {
+      message.error(`同步失败：${e.message || '未知错误'}`)
     } finally {
       setSyncing(false)
     }
+  }
+
+  async function handleConnectCloud(): Promise<void> {
+    const envId = cloudEnvId.trim()
+    if (!envId) { message.warning('请输入 CloudBase 环境 ID'); return }
+
+    message.loading({ content: '正在连接...', key: 'cloud' })
+    try {
+      const ok = await initCloud(envId)
+      if (ok) {
+        localStorage.setItem('cloud_envId', envId)
+        setCloudEnabled(true)
+        setCloudModalOpen(false)
+        message.success({ content: '云同步已连接', key: 'cloud' })
+      } else {
+        message.error({ content: '连接失败，请检查环境 ID 是否正确', key: 'cloud' })
+      }
+    } catch {
+      message.error({ content: '连接失败', key: 'cloud' })
+    }
+  }
+
+  async function handleDisconnectCloud(): Promise<void> {
+    disconnect()
+    localStorage.removeItem('cloud_envId')
+    setCloudEnabled(false)
+    setCloudEnvId('')
+    message.success('已断开云同步')
   }
 
   const selectedKey = '/' + location.pathname.split('/')[1]
@@ -235,7 +315,7 @@ function AppLayout(): JSX.Element {
                   size="small"
                   block
                   icon={<CloudOutlined />}
-                  onClick={handleSync}
+                  onClick={cloudEnabled ? handleSync : () => setCloudModalOpen(true)}
                   loading={syncing}
                   style={{
                     marginBottom: 6, borderRadius: 8,
@@ -243,7 +323,7 @@ function AppLayout(): JSX.Element {
                     color: cloudEnabled ? '#10B981' : '#CBD5E1',
                   }}
                 >
-                  {cloudEnabled ? '同步数据' : '云同步'}
+                  {cloudEnabled ? '同步数据' : '配置云端'}
                 </Button>
                 <Button
                   ghost
@@ -273,7 +353,7 @@ function AppLayout(): JSX.Element {
                   onClick={() => { setShortcutModalOpen(true); setShortcutInput(shortcut) }}
                   style={{ color: '#CBD5E1' }} />
                 <Button ghost size="small" type="text" icon={<CloudOutlined />}
-                  onClick={handleSync} loading={syncing}
+                  onClick={cloudEnabled ? handleSync : () => setCloudModalOpen(true)} loading={syncing}
                   style={{ color: cloudEnabled ? '#10B981' : '#CBD5E1' }} />
                 <Button ghost size="small" type="text" icon={<DownloadOutlined />}
                   onClick={handleBackup} style={{ color: '#CBD5E1' }} />
@@ -319,6 +399,44 @@ function AppLayout(): JSX.Element {
           <Outlet />
         </Content>
       </Layout>
+
+      {/* 云同步配置弹窗 */}
+      <Modal
+        title="☁️ 云同步设置"
+        open={cloudModalOpen}
+        onOk={handleConnectCloud}
+        onCancel={() => setCloudModalOpen(false)}
+        okText="连接"
+        cancelText="取消"
+        width={480}
+      >
+        <div style={{ marginBottom: 20 }}>
+          <Space direction="vertical" style={{ width: '100%' }} size={12}>
+            <div>
+              <div style={{ marginBottom: 8, fontWeight: 500, color: '#1E293B' }}>CloudBase 环境 ID</div>
+              <Input
+                placeholder="输入环境 ID，例如：daily-notes-xxx"
+                value={cloudEnvId}
+                onChange={(e) => setCloudEnvId(e.target.value)}
+                size="large"
+                style={{ borderRadius: 10 }}
+              />
+            </div>
+            <div style={{
+              background: '#FFFBF8', border: '1px solid #FFE0CC',
+              borderRadius: 10, padding: 14, fontSize: 13, color: '#B45309',
+            }}>
+              <p style={{ margin: 0, lineHeight: 1.6 }}>
+                💡 <strong>如何获取环境 ID？</strong><br />
+                1. 打开 <a href="https://console.cloud.tencent.com/tcb" target="_blank" rel="noreferrer">腾讯云 CloudBase 控制台</a><br />
+                2. 创建或选择一个环境<br />
+                3. 在「环境设置」中开启<strong>匿名登录</strong><br />
+                4. 复制环境 ID 粘贴到上方
+              </p>
+            </div>
+          </Space>
+        </div>
+      </Modal>
 
       {/* 快捷键设置弹窗 */}
       <Modal
