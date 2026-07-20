@@ -40,6 +40,16 @@ function HomePage(): JSX.Element {
     }
   }
 
+  const kbdStyle: React.CSSProperties = {
+    background: '#FFFFFF',
+    border: '1px solid #CBD5E1',
+    borderRadius: 4,
+    padding: '1px 6px',
+    fontSize: 11,
+    fontFamily: 'monospace',
+    color: '#64748B',
+  }
+
   const balance = incomeTotal - expenseTotal
   const budgetPercent = budget && budget > 0 ? Math.round((expenseTotal / budget) * 100) : 0
   const isOverBudget = budget ? expenseTotal > budget : false
@@ -140,7 +150,7 @@ function HomePage(): JSX.Element {
       )}
 
       {/* 三大统计卡片 */}
-      <Row gutter={20} style={{ marginBottom: 24 }}>
+      <Row gutter={20} style={{ marginBottom: 16 }}>
         {statCards.map((card) => (
           <Col span={8} key={card.title}>
             <div
@@ -163,6 +173,34 @@ function HomePage(): JSX.Element {
           </Col>
         ))}
       </Row>
+
+      {/* 快捷数据 & 键盘导航 */}
+      <div style={{
+        background: 'linear-gradient(135deg, #F8FAFC 0%, #FFFBF8 100%)',
+        border: '1px solid #E2E8F0',
+        borderRadius: 12,
+        padding: '10px 20px',
+        marginBottom: 20,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        flexWrap: 'wrap',
+        gap: 12,
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+          <Text type="secondary" style={{ fontSize: 13 }}>
+            📋 本月共 <strong style={{ color: '#1E293B' }}>{recentRecords.length}</strong> 条记录
+          </Text>
+          {budget && (
+            <Text type="secondary" style={{ fontSize: 13 }}>
+              💰 日均约 <strong style={{ color: '#1E293B' }}>¥{(expenseTotal / Math.max(dayjs().date(), 1)).toFixed(0)}</strong>
+            </Text>
+          )}
+        </div>
+        <Text type="secondary" style={{ fontSize: 12 }}>
+          ⌨️ <kbd style={kbdStyle}>Ctrl+1~6</kbd> 切换页面 · <kbd style={kbdStyle}>Ctrl+Shift+N</kbd> 快速记账
+        </Text>
+      </div>
 
       {/* 预算卡片 */}
       <Card

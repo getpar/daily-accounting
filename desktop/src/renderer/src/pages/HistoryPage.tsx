@@ -118,6 +118,26 @@ function HistoryPage(): JSX.Element {
     if (result.success) message.success(`已导出到：${result.path}`)
   }
 
+  async function handleExportCSV(): Promise<void> {
+    const exportData = await window.electronAPI.exportAll(selectedMonth.format('YYYY-MM'), selectedType)
+    if (exportData.length === 0) { message.warning('无数据可导出'); return }
+    // 手动生成 CSV（支持中文 BOM，Excel 可正确打开）
+    const BOM = '﻿'
+    const headers = ['日期', '类型', '一级分类', '二级分类', '金额', '备注']
+    const rows = exportData.map((r: any) => [
+      r['日期'] || r.date || '', r['类型'] || r.type || '',
+      r['一级分类'] || r.category_name || '', r['二级分类'] || r.subcategory_name || '',
+      r['金额'] || r.amount || '', (r['备注'] || r.note || '').replace(/,/g, '，'),
+    ])
+    const csv = BOM + headers.join(',') + '\n' + rows.map((r: string[]) => r.join(',')).join('\n')
+    const buf = new TextEncoder().encode(csv)
+    const result = await window.electronAPI.saveFile(
+      `每日小记_${selectedMonth.format('YYYY-MM')}.csv`,
+      Array.from(buf),
+    )
+    if (result.success) message.success(`CSV 已导出到：${result.path}`)
+  }
+
   const monthTotal = data.reduce((sum, d) => sum + (d.type === 'income' ? d.amount : -d.amount), 0)
   const expenseSum = data.filter(d => d.type === 'expense').reduce((s, d) => s + d.amount, 0)
   const incomeSum = data.filter(d => d.type === 'income').reduce((s, d) => s + d.amount, 0)
@@ -241,6 +261,9 @@ function HistoryPage(): JSX.Element {
           </Button>
           <Button icon={<DownloadOutlined />} type="primary" onClick={handleExport} style={{ borderRadius: 10 }}>
             导出 Excel
+          </Button>
+          <Button icon={<DownloadOutlined />} onClick={handleExportCSV} style={{ borderRadius: 10 }}>
+            导出 CSV
           </Button>
           {selectedRowKeys.length > 0 && (
             <Popconfirm title={`确定删除选中的 ${selectedRowKeys.length} 条记录？`} onConfirm={handleBatchDelete}>

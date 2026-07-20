@@ -4,7 +4,7 @@ import { Layout, Menu, Typography, Button, Switch, message, Modal } from 'antd'
 import {
   HomeOutlined, PlusCircleOutlined, UnorderedListOutlined, BarChartOutlined,
   TagsOutlined, SyncOutlined, SunOutlined, MoonOutlined,
-  DownloadOutlined, UploadOutlined, ThunderboltOutlined,
+  DownloadOutlined, UploadOutlined, ThunderboltOutlined, CloudOutlined,
 } from '@ant-design/icons'
 
 const { Sider, Content } = Layout
@@ -24,13 +24,28 @@ function AppLayout(): JSX.Element {
   const [shortcut, setShortcut] = useState('Ctrl+Shift+N')
   const [shortcutModalOpen, setShortcutModalOpen] = useState(false)
   const [shortcutInput, setShortcutInput] = useState('')
+  const [cloudEnabled, setCloudEnabled] = useState(false)
+  const [syncing, setSyncing] = useState(false)
   const navigate = useNavigate()
   const location = useLocation()
 
   useEffect(() => {
     if (localStorage.getItem('darkMode') === 'true') setDarkMode(true)
     loadShortcut()
-  }, [])
+    loadCloudStatus()
+    // 键盘导航：Ctrl+数字 切换页面
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!e.ctrlKey && !e.metaKey) return
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
+      const keyMap: Record<string, string> = {
+        '1': '/home', '2': '/add', '3': '/history',
+        '4': '/stats', '5': '/categories', '6': '/recurring',
+      }
+      if (keyMap[e.key]) { e.preventDefault(); navigate(keyMap[e.key]) }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [navigate])
 
   async function loadShortcut(): Promise<void> {
     try {
@@ -86,6 +101,30 @@ function AppLayout(): JSX.Element {
         message.error(result.error)
       }
     } catch { message.error('恢复失败') }
+  }
+
+  async function loadCloudStatus(): Promise<void> {
+    try {
+      const status = await window.electronAPI.getCloudStatus()
+      setCloudEnabled(status.enabled)
+    } catch { /* ignore */ }
+  }
+
+  async function handleSync(): Promise<void> {
+    if (syncing) return
+    setSyncing(true)
+    try {
+      const result = await window.electronAPI.cloudSync()
+      if (result.success) {
+        message.success(`同步完成：上传 ${result.uploaded} 条，下载 ${result.downloaded} 条`)
+      } else {
+        message.warning(result.error || '同步暂不可用（等待 CloudBase 环境激活）')
+      }
+    } catch {
+      message.error('同步失败')
+    } finally {
+      setSyncing(false)
+    }
   }
 
   const selectedKey = '/' + location.pathname.split('/')[1]
@@ -195,6 +234,21 @@ function AppLayout(): JSX.Element {
                   ghost
                   size="small"
                   block
+                  icon={<CloudOutlined />}
+                  onClick={handleSync}
+                  loading={syncing}
+                  style={{
+                    marginBottom: 6, borderRadius: 8,
+                    borderColor: cloudEnabled ? 'rgba(16,185,129,0.4)' : 'rgba(255,255,255,0.15)',
+                    color: cloudEnabled ? '#10B981' : '#CBD5E1',
+                  }}
+                >
+                  {cloudEnabled ? '同步数据' : '云同步'}
+                </Button>
+                <Button
+                  ghost
+                  size="small"
+                  block
                   icon={<DownloadOutlined />}
                   onClick={handleBackup}
                   style={{ marginBottom: 6, borderRadius: 8, borderColor: 'rgba(255,255,255,0.15)', color: '#CBD5E1' }}
@@ -218,6 +272,9 @@ function AppLayout(): JSX.Element {
                 <Button ghost size="small" type="text" icon={<ThunderboltOutlined />}
                   onClick={() => { setShortcutModalOpen(true); setShortcutInput(shortcut) }}
                   style={{ color: '#CBD5E1' }} />
+                <Button ghost size="small" type="text" icon={<CloudOutlined />}
+                  onClick={handleSync} loading={syncing}
+                  style={{ color: cloudEnabled ? '#10B981' : '#CBD5E1' }} />
                 <Button ghost size="small" type="text" icon={<DownloadOutlined />}
                   onClick={handleBackup} style={{ color: '#CBD5E1' }} />
                 <Button ghost size="small" type="text" icon={<UploadOutlined />}

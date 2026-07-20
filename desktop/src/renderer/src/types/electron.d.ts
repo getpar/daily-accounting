@@ -93,6 +93,11 @@ interface ElectronAPI {
   executeRecurring: (id: number) => Promise<{ success: boolean; error?: string }>
   getShortcut: () => Promise<string>
   setShortcut: (accelerator: string) => Promise<{ success: boolean }>
+
+  // 云同步
+  getCloudStatus: () => Promise<{ enabled: boolean; envId: string; manifest: { lastSyncAt: string; recordCount: number; envId: string } | null }>
+  setCloudEnvId: (envId: string) => Promise<{ success: boolean }>
+  cloudSync: () => Promise<{ success: boolean; uploaded: number; downloaded: number; error?: string }>
 }
 
 declare global {

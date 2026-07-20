@@ -46,4 +46,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // 快捷键
   getShortcut: () => ipcRenderer.invoke('shortcut:get'),
   setShortcut: (accelerator: string) => ipcRenderer.invoke('shortcut:set', accelerator),
+
+  // 云同步
+  getCloudStatus: () => ipcRenderer.invoke('cloud:getStatus'),
+  setCloudEnvId: (envId: string) => ipcRenderer.invoke('cloud:setEnvId', envId),
+  cloudSync: () => ipcRenderer.invoke('cloud:sync'),
 })
