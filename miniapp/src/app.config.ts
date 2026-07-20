@@ -5,6 +5,7 @@ export default defineAppConfig({
     'pages/history/index',
     'pages/stats/index',
     'pages/categories/index',
+    'pages/recurring/index',
   ],
   window: {
     backgroundTextStyle: 'light',

@@ -206,3 +206,73 @@ export async function setBudget(val: number): Promise<void> {
   if (val === 0) { Taro.removeStorageSync('budget'); return }
   Taro.setStorageSync('budget', String(val))
 }
+
+// ========== 周期账单 ==========
+
+export interface RecurringBill {
+  id: string
+  type: 'expense' | 'income'
+  amount: number
+  categoryKey: string
+  categoryName: string
+  subcategoryKey: string
+  subcategoryName: string
+  note: string
+  cycle: 'daily' | 'weekly' | 'monthly' | 'yearly'
+  nextDate: string
+  isActive: boolean
+}
+
+export async function getRecurringBills(): Promise<RecurringBill[]> {
+  const raw = Taro.getStorageSync('recurring_bills')
+  return raw ? JSON.parse(raw) : []
+}
+
+function saveRecurringBills(list: RecurringBill[]): void {
+  Taro.setStorageSync('recurring_bills', JSON.stringify(list))
+}
+
+export async function addRecurringBill(bill: Omit<RecurringBill, 'id'>): Promise<void> {
+  const list = await getRecurringBills()
+  list.push({ ...bill, id: Date.now().toString() })
+  saveRecurringBills(list)
+}
+
+export async function deleteRecurringBill(id: string): Promise<void> {
+  saveRecurringBills((await getRecurringBills()).filter((b) => b.id !== id))
+}
+
+export async function toggleRecurringBill(id: string, active: boolean): Promise<void> {
+  saveRecurringBills((await getRecurringBills()).map((b) => (b.id === id ? { ...b, isActive: active } : b)))
+}
+
+/** 执行周期账单：创建一笔记录，并自动更新下次日期 */
+export async function executeRecurringBill(id: string): Promise<void> {
+  const bills = await getRecurringBills()
+  const bill = bills.find((b) => b.id === id)
+  if (!bill || !bill.isActive) return
+
+  // 1. 创建记账记录
+  await addRecord({
+    type: bill.type,
+    amount: bill.amount,
+    categoryKey: bill.categoryKey,
+    categoryName: bill.categoryName,
+    subcategoryKey: bill.subcategoryKey,
+    subcategoryName: bill.subcategoryName,
+    note: bill.note,
+    date: new Date().toISOString().slice(0, 10),
+  })
+
+  // 2. 计算下一个日期
+  const next = new Date(bill.nextDate)
+  switch (bill.cycle) {
+    case 'daily': next.setDate(next.getDate() + 1); break
+    case 'weekly': next.setDate(next.getDate() + 7); break
+    case 'monthly': next.setMonth(next.getMonth() + 1); break
+    case 'yearly': next.setFullYear(next.getFullYear() + 1); break
+  }
+  bill.nextDate = next.toISOString().slice(0, 10)
+
+  saveRecurringBills(bills)
+}

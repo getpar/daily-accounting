@@ -146,6 +146,10 @@ export default function Index(): JSX.Element {
           <View className='action-icon action-cat'>🏷️</View>
           <Text className='action-text'>分类</Text>
         </View>
+        <View className='action-item' onClick={() => Taro.navigateTo({ url: '/pages/recurring/index' })}>
+          <View className='action-icon action-recur'>🔁</View>
+          <Text className='action-text'>周期</Text>
+        </View>
         <View className='action-item' onClick={() => Taro.switchTab({ url: '/pages/stats/index' })}>
           <View className='action-icon action-stats'>📊</View>
           <Text className='action-text'>统计</Text>

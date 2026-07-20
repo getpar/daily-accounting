@@ -1,26 +1,79 @@
 .wrap { padding: 24rpx; padding-bottom: 120rpx; }
 
-/* 头部 */
+/* ---- 头部 ---- */
 .header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24rpx; }
 .page-title { font-size: 34rpx; font-weight: 800; color: #1E293B; }
-.add-btn { font-size: 28rpx; color: #fff; background: linear-gradient(135deg, #FF6B35, #FF8555); padding: 12rpx 28rpx; border-radius: 20rpx; font-weight: 600; }
+.add-major-btn {
+  font-size: 26rpx; color: #FF6B35; background: #FFF0E8;
+  padding: 10rpx 22rpx; border-radius: 20rpx; font-weight: 600;
+}
 
-/* 添加面板 */
-.add-card { background: #fff; border-radius: 24rpx; padding: 24rpx; margin-bottom: 24rpx; border: 2rpx solid #FF6B35; box-shadow: 0 4rpx 16rpx rgba(255,107,53,0.1); }
-.form-row { margin-bottom: 18rpx; }
-.label { font-size: 26rpx; color: #94A3B8; display: block; margin-bottom: 8rpx; font-weight: 500; }
-.picker { display: flex; justify-content: space-between; font-size: 30rpx; padding: 10rpx 0; color: #1E293B; }
-.arrow { font-size: 24rpx; color: #CBD5E1; }
-.sub-input { font-size: 28rpx; border: 2rpx solid #E2E8F0; border-radius: 14rpx; padding: 14rpx; width: 100%; box-sizing: border-box; background: #F8FAFC; }
-.add-actions { display: flex; justify-content: flex-end; gap: 20rpx; margin-top: 4rpx; }
-.cancel-btn { font-size: 28rpx; color: #94A3B8; padding: 12rpx 24rpx; }
-.ok-btn { font-size: 28rpx; color: #fff; background: linear-gradient(135deg, #FF6B35, #FF8555); padding: 12rpx 28rpx; border-radius: 14rpx; font-weight: 600; }
+/* ---- 添加新大类弹窗 ---- */
+.add-card {
+  background: #fff; border-radius: 24rpx; padding: 24rpx; margin-bottom: 24rpx;
+  border: 2rpx solid #FF6B35; box-shadow: 0 4rpx 16rpx rgba(255,107,53,0.1);
+  word-wrap: break-word; overflow-wrap: break-word;
+}
+.add-card-title {
+  font-size: 26rpx; color: #FF6B35; font-weight: 600;
+  display: block; margin-bottom: 16rpx;
+  word-wrap: break-word; overflow-wrap: break-word; line-height: 1.5;
+}
+.form-row { margin-bottom: 16rpx; }
+.label {
+  font-size: 26rpx; color: #94A3B8; display: block;
+  margin-bottom: 8rpx; font-weight: 500;
+  word-wrap: break-word; overflow-wrap: break-word;
+}
+.input {
+  font-size: 28rpx; border: 2rpx solid #E2E8F0; border-radius: 14rpx;
+  padding: 16rpx 20rpx; width: 100%; box-sizing: border-box;
+  background: #F8FAFC; height: 72rpx; line-height: 40rpx;
+}
+.add-actions { display: flex; justify-content: flex-end; gap: 20rpx; margin-top: 4rpx; flex-wrap: wrap; }
+.cancel-btn { font-size: 28rpx; color: #94A3B8; padding: 12rpx 24rpx; white-space: nowrap; }
+.ok-btn { font-size: 28rpx; color: #fff; background: linear-gradient(135deg, #FF6B35, #FF8555); padding: 12rpx 28rpx; border-radius: 14rpx; font-weight: 600; white-space: nowrap; }
 
-/* 分类组 */
+/* ---- 分类组 ---- */
 .cat-group { background: #fff; border-radius: 24rpx; padding: 22rpx; margin-bottom: 18rpx; box-shadow: 0 2rpx 12rpx rgba(0,0,0,0.04); }
-.group-title { font-size: 30rpx; font-weight: 700; display: block; margin-bottom: 14rpx; color: #FF6B35; }
+.group-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12rpx; gap: 12rpx; }
+.group-title {
+  font-size: 30rpx; font-weight: 700; color: #FF6B35;
+  flex: 1; word-wrap: break-word; overflow-wrap: break-word;
+}
+.add-sub-btn {
+  font-size: 24rpx; color: #FF6B35; background: #FFF0E8;
+  padding: 6rpx 18rpx; border-radius: 14rpx; font-weight: 500;
+  white-space: nowrap; flex-shrink: 0;
+}
+
+/* ---- 行内添加表单（出现在大类下方）---- */
+.inline-add {
+  background: #FFFBF8; border-radius: 16rpx; padding: 16rpx;
+  margin-bottom: 14rpx; border: 2rpx dashed #FFE0CC;
+  word-wrap: break-word; overflow-wrap: break-word;
+}
+.inline-label {
+  font-size: 24rpx; color: #B45309; display: block;
+  margin-bottom: 10rpx; line-height: 1.5;
+  word-wrap: break-word; overflow-wrap: break-word;
+}
+.inline-row { display: flex; gap: 12rpx; align-items: center; }
+.inline-input {
+  flex: 1; font-size: 28rpx; border: 2rpx solid #E2E8F0;
+  border-radius: 14rpx; padding: 12rpx 16rpx; background: #fff;
+  height: 68rpx; line-height: 44rpx; box-sizing: border-box;
+}
+.inline-ok {
+  font-size: 28rpx; color: #fff; background: linear-gradient(135deg, #FF6B35, #FF8555);
+  padding: 12rpx 28rpx; border-radius: 14rpx; font-weight: 600; white-space: nowrap;
+}
+
+/* ---- 小类列表 ---- */
 .sub-list { display: flex; flex-wrap: wrap; gap: 12rpx; }
 .sub-tag { padding: 8rpx 18rpx; border-radius: 12rpx; font-size: 26rpx; background: #F1F5F9; color: #64748B; display: flex; align-items: center; gap: 6rpx; }
 .sub-tag.custom { background: #FFF0E8; color: #FF6B35; }
 .del-icon { font-size: 28rpx; color: #EF4444; font-weight: 700; padding: 0 4rpx; }
-.tip { text-align: center; padding: 40rpx; font-size: 26rpx; color: #CBD5E1; }
+
+/* ---- 提示 ---- */
+.tip { text-align: center; padding: 40rpx 16rpx; font-size: 24rpx; color: #CBD5E1; line-height: 1.6; word-wrap: break-word; }
