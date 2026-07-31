@@ -276,3 +276,91 @@ export async function executeRecurringBill(id: string): Promise<void> {
 
   saveRecurringBills(bills)
 }
+
+// ========== 待办事项 ==========
+
+export interface Todo {
+  id: string
+  title: string
+  cycle: 'daily' | 'weekly' | 'monthly' | 'yearly' | 'once'
+  nextDate: string
+  time?: string          // HH:mm，可选的具体时间
+  isActive: boolean
+  // 可选关联记账
+  amount?: number
+  categoryKey?: string
+  categoryName?: string
+  subcategoryKey?: string
+  subcategoryName?: string
+  note?: string
+  completedDates: string[]
+  createdAt: string
+}
+
+export async function getTodos(): Promise<Todo[]> {
+  const raw = Taro.getStorageSync('todos')
+  return raw ? JSON.parse(raw) : []
+}
+
+function saveTodos(list: Todo[]): void {
+  Taro.setStorageSync('todos', JSON.stringify(list))
+}
+
+export async function addTodo(todo: Omit<Todo, 'id' | 'completedDates' | 'createdAt'>): Promise<void> {
+  const list = await getTodos()
+  list.unshift({
+    ...todo,
+    id: Date.now().toString(),
+    completedDates: [],
+    createdAt: new Date().toISOString().slice(0, 10),
+  })
+  saveTodos(list)
+}
+
+export async function deleteTodo(id: string): Promise<void> {
+  saveTodos((await getTodos()).filter((t) => t.id !== id))
+}
+
+export async function toggleTodo(id: string, active: boolean): Promise<void> {
+  saveTodos((await getTodos()).map((t) => (t.id === id ? { ...t, isActive: active } : t)))
+}
+
+/** 完成待办：记录完成日期，自动推算下一周期，有关联金额则自动记账 */
+export async function completeTodo(id: string): Promise<void> {
+  const list = await getTodos()
+  const todo = list.find((t) => t.id === id)
+  if (!todo) return
+
+  const today = new Date().toISOString().slice(0, 10)
+  todo.completedDates.push(today)
+
+  // 有关联金额 → 自动创建记账记录
+  if (todo.amount && todo.amount > 0 && todo.categoryKey && todo.subcategoryKey) {
+    await addRecord({
+      type: 'expense',
+      amount: todo.amount,
+      categoryKey: todo.categoryKey,
+      categoryName: todo.categoryName || '',
+      subcategoryKey: todo.subcategoryKey,
+      subcategoryName: todo.subcategoryName || '',
+      note: `[待办] ${todo.title}${todo.note ? ' · ' + todo.note : ''}`,
+      date: today,
+    })
+  }
+
+  // 推算下一周期或停用
+  if (todo.cycle === 'once') {
+    todo.isActive = false
+  } else {
+    const next = new Date(todo.nextDate)
+    switch (todo.cycle) {
+      case 'daily': next.setDate(next.getDate() + 1); break
+      case 'weekly': next.setDate(next.getDate() + 7); break
+      case 'monthly': next.setMonth(next.getMonth() + 1); break
+      case 'yearly': next.setFullYear(next.getFullYear() + 1); break
+    }
+    todo.nextDate = next.toISOString().slice(0, 10)
+  }
+
+  saveTodos(list)
+}

@@ -138,6 +138,10 @@ export default function Index(): JSX.Element {
           <View className='action-icon action-add'>✏️</View>
           <Text className='action-text'>记账</Text>
         </View>
+        <View className='action-item' onClick={() => Taro.navigateTo({ url: '/pages/todos/index' })}>
+          <View className='action-icon action-todo'>🔔</View>
+          <Text className='action-text'>待办</Text>
+        </View>
         <View className='action-item' onClick={() => { setShowBudget(true); setBudgetInput(budget > 0 ? String(Math.round(budget)) : '') }}>
           <View className='action-icon action-budget'>🎯</View>
           <Text className='action-text'>{budget > 0 ? '预算' : '设预算'}</Text>
