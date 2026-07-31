@@ -500,47 +500,19 @@ function setupIPC(): void {
     return { success: true }
   })
 
-  // ---- 云同步 ----
-  const {
-    setCloudEnvId, isCloudEnabled, getCloudEnvId,
-    loadManifest, recordsToSyncFormat, performFullSync,
-  } = require('./cloudSync')
-
+  // ---- 云同步（状态查询，实际同步在渲染进程 cloudbase.ts 中执行）----
   ipcMain.handle('cloud:getStatus', () => ({
-    enabled: isCloudEnabled(),
-    envId: getCloudEnvId(),
-    manifest: loadManifest(),
+    enabled: false,  // 由渲染进程 cloudbase.ts 管理连接状态
+    envId: '',
+    manifest: null,
   }))
 
-  ipcMain.handle('cloud:setEnvId', (_event, envId: string) => {
-    setCloudEnvId(envId)
+  ipcMain.handle('cloud:setEnvId', (_event, _envId: string) => {
     return { success: true }
   })
 
   ipcMain.handle('cloud:sync', async () => {
-    // 拉取所有本地记录用于同步
-    const allRecords = queryAll('SELECT * FROM records ORDER BY record_date DESC')
-    const result = await performFullSync(allRecords, async (cloudRecords) => {
-      let count = 0
-      for (const r of cloudRecords) {
-        // 检查是否已存在（按日期+金额+分类去重）
-        const exist = queryOne(
-          `SELECT id FROM records WHERE record_date=? AND amount=? AND subcategory_key=? AND type=?`,
-          [r.date, r.amount, r.subcategoryKey, r.type]
-        )
-        if (!exist) {
-          db!.run(
-            'INSERT INTO records (type, amount, category_key, subcategory_key, note, record_date) VALUES (?, ?, ?, ?, ?, ?)',
-            [r.type, r.amount, r.categoryKey, r.subcategoryKey,
-             `[云端] ${r.note || ''}`, r.date]
-          )
-          count++
-        }
-      }
-      if (count > 0) saveDatabase()
-      return count
-    })
-    return result
+    return { success: false, uploaded: 0, downloaded: 0, error: '请在侧边栏使用云同步功能' }
   })
 }
 
