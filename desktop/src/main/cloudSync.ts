@@ -166,7 +166,7 @@ export async function performFullSync(
     // 2. 下载
     const manifest = loadManifest()
     const downloadResult = await downloadFromCloud(manifest?.lastSyncAt)
-    if (!downloadResult.success) return { ...downloadResult, uploaded: uploadResult.uploaded }
+    if (!downloadResult.success) return { ...downloadResult, uploaded: uploadResult.uploaded, downloaded: 0 }
 
     // 3. 写入本地
     let downloaded = 0

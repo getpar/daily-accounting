@@ -6,6 +6,7 @@ import HistoryPage from './pages/HistoryPage'
 import StatsPage from './pages/StatsPage'
 import CategoryPage from './pages/CategoryPage'
 import RecurringPage from './pages/RecurringPage'
+import TodosPage from './pages/TodosPage'
 import QuickAddPage from './pages/QuickAddPage'
 
 function App(): JSX.Element {
@@ -19,6 +20,7 @@ function App(): JSX.Element {
         <Route path="stats" element={<StatsPage />} />
         <Route path="categories" element={<CategoryPage />} />
         <Route path="recurring" element={<RecurringPage />} />
+        <Route path="todos" element={<TodosPage />} />
         <Route path="quick-add" element={<QuickAddPage />} />
       </Route>
     </Routes>

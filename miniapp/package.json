@@ -5,7 +5,8 @@
   "description": "每日小记 — 微信小程序版",
   "scripts": {
     "dev:weapp": "taro build --type weapp --watch",
-    "build:weapp": "taro build --type weapp"
+    "build:weapp": "taro build --type weapp",
+    "verify:sync": "tsc src/utils/cloudCore.ts --outDir .sync-verify --module commonjs --target es2019 --skipLibCheck && node scripts/verify-sync.js"
   },
   "dependencies": {
     "@tarojs/components": "3.6.32",

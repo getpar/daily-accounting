@@ -198,7 +198,7 @@ function HomePage(): JSX.Element {
           )}
         </div>
         <Text type="secondary" style={{ fontSize: 12 }}>
-          ⌨️ <kbd style={kbdStyle}>Ctrl+1~6</kbd> 切换页面 · <kbd style={kbdStyle}>Ctrl+Shift+N</kbd> 快速记账
+          ⌨️ <kbd style={kbdStyle}>Ctrl+1~7</kbd> 切换页面 · <kbd style={kbdStyle}>Ctrl+Shift+N</kbd> 快速记账
         </Text>
       </div>
 

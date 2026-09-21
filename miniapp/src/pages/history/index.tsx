@@ -1,7 +1,7 @@
 import { View, Text, Picker, Input } from '@tarojs/components'
 import Taro, { useDidShow } from '@tarojs/taro'
 import { useState, useEffect } from 'react'
-import { getRecords, deleteRecord, updateRecord, getMergedCategories } from '../../utils/storage'
+import { getRecords, deleteRecord, updateRecord, getMergedCategories, syncNow } from '../../utils/storage'
 import * as XLSX from 'xlsx'
 import './index.scss'
 
@@ -26,7 +26,11 @@ export default function History(): JSX.Element {
   const [editSub, setEditSub] = useState('')
   const [editNote, setEditNote] = useState('')
 
-  useDidShow(() => { getRecords().then(setRecords) })
+  useDidShow(() => {
+    getRecords().then(setRecords)
+    // 进入账单页时与云端同步一次，拉到新记录就重新列表
+    syncNow().then((r) => { if (r.pulled > 0) getRecords().then(setRecords) }).catch(() => { /* ignore */ })
+  })
 
   async function handleDelete(id: string): Promise<void> {
     Taro.showModal({ title: '确定删除？', success: async (res) => {
@@ -44,7 +48,7 @@ export default function History(): JSX.Element {
     const amt = parseFloat(editAmt)
     if (!amt || amt <= 0) { Taro.showToast({ title: '金额无效', icon: 'none' }); return }
     const currentCat = editCategories.find((c) => c.key === editCat)
-    const sub = currentCat?.subs.find((s) => s.key === editSub)
+    const sub = currentCat?.subs.find((s: any) => s.key === editSub)
     await updateRecord(editId, {
       type: editType, amount: amt, categoryKey: editCat, categoryName: currentCat!.name,
       subcategoryKey: editSub, subcategoryName: sub!.name, note: editNote, date: editDate,
@@ -109,7 +113,7 @@ export default function History(): JSX.Element {
       </View>
 
       <View className='search-bar'>
-        <input className='search-input' placeholder='搜索备注或分类...' value={keyword} onInput={(e) => setKeyword(e.detail.value)} />
+        <input className='search-input' placeholder='搜索备注或分类...' value={keyword} onInput={(e: any) => setKeyword(e.detail.value)} />
         {keyword && <Text className='search-clear' onClick={() => setKeyword('')}>✕</Text>}
       </View>
 
@@ -165,7 +169,7 @@ export default function History(): JSX.Element {
               </Picker>
               {editCurrentCat && (
                 <View className='sub-grid' style={{ marginTop: '12rpx' }}>
-                  {editCurrentCat.subs.map((s) => (
+                  {editCurrentCat.subs.map((s: any) => (
                     <View key={s.key} className={`sub-item ${editSub === s.key ? 'sub-active' : ''}`} onTouchEnd={(e) => { e.stopPropagation(); setEditSub(s.key) }}>
                       <Text>{s.name}</Text>
                     </View>

@@ -1,16 +1,21 @@
 import { useState, useEffect } from 'react'
 import { Outlet, useNavigate, useLocation } from 'react-router-dom'
-import { Layout, Menu, Typography, Button, Switch, message, Modal, Input, Space } from 'antd'
+import { Layout, Menu, Typography, Button, Switch, message, Modal, Input, Space, notification } from 'antd'
 import {
   HomeOutlined, PlusCircleOutlined, UnorderedListOutlined, BarChartOutlined,
   TagsOutlined, SyncOutlined, SunOutlined, MoonOutlined,
-  DownloadOutlined, UploadOutlined, ThunderboltOutlined, CloudOutlined,
+  DownloadOutlined, UploadOutlined, ThunderboltOutlined, CloudOutlined, CheckSquareOutlined, CopyOutlined,
 } from '@ant-design/icons'
 import {
   initCloud, isConnected, getEnvId, performSync, disconnect, CloudRecord,
+  getOwnerId, setOwnerId, newOwnerId, formatOwnerId,
 } from '../services/cloudbase'
 
 const { Sider, Content } = Layout
+const { Text } = Typography
+
+// 默认云环境（与小程序端 cloud.ts 的 CLOUD_ENV_ID 一致），弹窗可改
+const DEFAULT_CLOUD_ENV_ID = 'daily-notes-d3gaotrwyc09ff44a'
 
 const menuItems = [
   { key: '/home', icon: <HomeOutlined />, label: '首页' },
@@ -19,6 +24,7 @@ const menuItems = [
   { key: '/stats', icon: <BarChartOutlined />, label: '统计分析' },
   { key: '/categories', icon: <TagsOutlined />, label: '分类管理' },
   { key: '/recurring', icon: <SyncOutlined />, label: '周期账单' },
+  { key: '/todos', icon: <CheckSquareOutlined />, label: '待办事项' },
 ]
 
 function AppLayout(): JSX.Element {
@@ -30,7 +36,8 @@ function AppLayout(): JSX.Element {
   const [cloudEnabled, setCloudEnabled] = useState(false)
   const [syncing, setSyncing] = useState(false)
   const [cloudModalOpen, setCloudModalOpen] = useState(false)
-  const [cloudEnvId, setCloudEnvId] = useState('')
+  const [cloudEnvId, setCloudEnvId] = useState(localStorage.getItem('cloud_envId') || DEFAULT_CLOUD_ENV_ID)
+  const [cloudCode, setCloudCode] = useState('')
   const navigate = useNavigate()
   const location = useLocation()
 
@@ -44,13 +51,29 @@ function AppLayout(): JSX.Element {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
       const keyMap: Record<string, string> = {
         '1': '/home', '2': '/add', '3': '/history',
-        '4': '/stats', '5': '/categories', '6': '/recurring',
+        '4': '/stats', '5': '/categories', '6': '/recurring', '7': '/todos',
       }
       if (keyMap[e.key]) { e.preventDefault(); navigate(keyMap[e.key]) }
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [navigate])
+
+  useEffect(() => {
+    // 周期账单到期后由主进程自动入账 → 这里接收通知弹右下角浮窗提醒
+    window.electronAPI.onRecurringAutoRun?.((list) => {
+      if (!list || list.length === 0) return
+      const summary = list
+        .map((b) => `${b.name} ${b.type === 'income' ? '+' : '-'}¥${b.amount.toFixed(2)}`)
+        .join('、')
+      notification.success({
+        message: `周期账单已自动入账 ${list.length} 笔`,
+        description: `${summary}，下次到期日已自动更新`,
+        placement: 'bottomRight',
+        duration: 8,
+      })
+    })
+  }, [])
 
   async function loadShortcut(): Promise<void> {
     try {
@@ -109,13 +132,14 @@ function AppLayout(): JSX.Element {
   }
 
   async function loadCloudStatus(): Promise<void> {
-    // 检查 localStorage 中是否保存了 envId 并且已连接
-    const savedEnvId = localStorage.getItem('cloud_envId')
+    // 检查 localStorage 中是否保存了 envId（没填过则用默认环境），自动静重连
+    const savedEnvId = localStorage.getItem('cloud_envId') || DEFAULT_CLOUD_ENV_ID
     if (savedEnvId) {
       setCloudEnvId(savedEnvId)
       try {
         const ok = await initCloud(savedEnvId)
         setCloudEnabled(ok)
+        if (ok) localStorage.setItem('cloud_envId', savedEnvId)
       } catch { /* ignore */ }
     }
   }
@@ -125,23 +149,23 @@ function AppLayout(): JSX.Element {
 
     // 如果未连接，打开配置弹窗
     if (!isConnected()) {
-      setCloudModalOpen(true)
+      openCloudModal()
       return
     }
 
     setSyncing(true)
     try {
-      // 1. 拉取所有本地记录
-      const allLocal = await window.electronAPI.exportAll()
-      const localRecords = allLocal.map((r: any) => ({
-        type: r['类型'] === '收入' ? 'income' : 'expense',
-        amount: Number(r['金额']) || 0,
-        categoryKey: '',  // 从导出数据中提取
-        categoryName: r['一级分类'] || '',
-        subcategoryKey: '',
-        subcategoryName: r['二级分类'] || '',
-        note: r['备注'] || '',
-        date: r['日期'] || '',
+      // 1. 拉取全部本地记录（用列表接口，带分类 key；不能用导出格式，它只有中文名、缺 categoryKey 会导致云端数据残缺）
+      const { rows } = await window.electronAPI.getRecordList({ page: 1, pageSize: 100000 })
+      const localRecords = rows.map((r: any) => ({
+        type: r.type,
+        amount: Number(r.amount) || 0,
+        categoryKey: r.category_key || '',
+        categoryName: r.category_name || '',
+        subcategoryKey: r.subcategory_key || '',
+        subcategoryName: r.subcategory_name || '',
+        note: r.note || '',
+        date: r.record_date || '',
       }))
 
       // 2. 执行同步
@@ -151,6 +175,7 @@ function AppLayout(): JSX.Element {
         // 3. 将云端新记录写入本地 SQLite
         let imported = 0
         for (const cr of newCloudRecords) {
+          if (!cr.categoryKey || !cr.subcategoryKey) continue // 跳过缺分类键的历史残缺数据，不污染本地
           try {
             await window.electronAPI.addRecord({
               type: cr.type || 'expense',
@@ -179,9 +204,21 @@ function AppLayout(): JSX.Element {
     }
   }
 
+  function openCloudModal(): void {
+    setCloudCode(formatOwnerId(getOwnerId()))
+    setCloudModalOpen(true)
+  }
+
   async function handleConnectCloud(): Promise<void> {
     const envId = cloudEnvId.trim()
     if (!envId) { message.warning('请输入 CloudBase 环境 ID'); return }
+
+    // 同步码：填了就先校验再保存；没填则沿用/自动生成现有码
+    const code = cloudCode.trim()
+    if (code && !setOwnerId(code)) {
+      message.error('同步码格式不对（至少 8 位字母或数字）')
+      return
+    }
 
     message.loading({ content: '正在连接...', key: 'cloud' })
     try {
@@ -315,7 +352,7 @@ function AppLayout(): JSX.Element {
                   size="small"
                   block
                   icon={<CloudOutlined />}
-                  onClick={cloudEnabled ? handleSync : () => setCloudModalOpen(true)}
+                  onClick={cloudEnabled ? handleSync : openCloudModal}
                   loading={syncing}
                   style={{
                     marginBottom: 6, borderRadius: 8,
@@ -353,7 +390,7 @@ function AppLayout(): JSX.Element {
                   onClick={() => { setShortcutModalOpen(true); setShortcutInput(shortcut) }}
                   style={{ color: '#CBD5E1' }} />
                 <Button ghost size="small" type="text" icon={<CloudOutlined />}
-                  onClick={cloudEnabled ? handleSync : () => setCloudModalOpen(true)} loading={syncing}
+                  onClick={cloudEnabled ? handleSync : openCloudModal} loading={syncing}
                   style={{ color: cloudEnabled ? '#10B981' : '#CBD5E1' }} />
                 <Button ghost size="small" type="text" icon={<DownloadOutlined />}
                   onClick={handleBackup} style={{ color: '#CBD5E1' }} />
@@ -421,6 +458,24 @@ function AppLayout(): JSX.Element {
                 size="large"
                 style={{ borderRadius: 10 }}
               />
+            </div>
+            <div>
+              <div style={{ marginBottom: 8, fontWeight: 500, color: '#1E293B' }}>同步码（同一本账的钥匙）</div>
+              <Space.Compact style={{ width: '100%' }}>
+                <Input
+                  placeholder="输入小程序上显示的同步码，或直接点右边生成"
+                  value={cloudCode}
+                  onChange={(e) => setCloudCode(e.target.value)}
+                  size="large"
+                  style={{ borderRadius: '10px 0 0 10px', letterSpacing: 1 }}
+                />
+                <Button size="large" onClick={() => setCloudCode(formatOwnerId(newOwnerId()))}>重新生成</Button>
+                <Button size="large" icon={<CopyOutlined />}
+                  onClick={() => { navigator.clipboard.writeText(cloudCode); message.success('同步码已复制，去小程序里粘贴即可') }} />
+              </Space.Compact>
+              <Text type="secondary" style={{ fontSize: 12, display: 'block', marginTop: 6 }}>
+                手机小程序和电脑输入同一个码 = 同一本账；别人用你的安装包也会自动分到各自的账本，互相看不到
+              </Text>
             </div>
             <div style={{
               background: '#FFFBF8', border: '1px solid #FFE0CC',

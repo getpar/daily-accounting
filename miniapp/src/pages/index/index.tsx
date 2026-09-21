@@ -1,7 +1,9 @@
 import { View, Text, Input, Picker } from '@tarojs/components'
 import Taro, { useDidShow } from '@tarojs/taro'
 import { useState, useMemo, useEffect } from 'react'
-import { getMonthTotal, getRecords, getBudget, setBudget as saveBudgetToStorage } from '../../utils/storage'
+import { getMonthTotal, getRecords, getBudget, setBudget as saveBudgetToStorage, syncNow } from '../../utils/storage'
+import { getOwnerId, joinOwnerId, regenerateOwnerId, usingRealCloud } from '../../utils/cloud'
+import { formatOwnerId } from '../../utils/cloudCore'
 import './index.scss'
 
 const THIS_MONTH = (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}` })()
@@ -27,6 +29,10 @@ export default function Index(): JSX.Element {
   const [budget, setBudget] = useState(0)
   const [showBudget, setShowBudget] = useState(false)
   const [budgetInput, setBudgetInput] = useState('')
+  // 云同步 / 同步码（多用户隔离）
+  const [showCloud, setShowCloud] = useState(false)
+  const [ownerId, setOwnerId_] = useState('')
+  const [joinInput, setJoinInput] = useState('')
 
   const isCurrentMonth = month === THIS_MONTH
 
@@ -51,7 +57,11 @@ export default function Index(): JSX.Element {
     } else { setBudget(0) }
   }
 
-  useDidShow(() => { refresh() })
+  useDidShow(() => {
+    refresh()
+    // 每次回到首页先和云端同步一次：桌面端记的账拉下来就地刷新
+    syncNow().then((r) => { if (r.pulled > 0) refresh() }).catch(() => { /* 同步失败不影响本地查看 */ })
+  })
   useEffect(() => { refresh() }, [month])
   Taro.eventCenter.on('dataChanged', refresh)
 
@@ -70,6 +80,38 @@ export default function Index(): JSX.Element {
       content: '将删除全部记账记录和预算',
       success: (res) => {
         if (res.confirm) { Taro.clearStorageSync(); setExp(0); setInc(0); setRecent([]); setBudget(0); Taro.eventCenter.trigger('dataChanged') }
+      },
+    })
+  }
+
+  function openCloud(): void {
+    setOwnerId_(getOwnerId())
+    setJoinInput('')
+    setShowCloud(true)
+  }
+
+  function copyOwnerId(): void {
+    Taro.setClipboardData({ data: getOwnerId() })
+  }
+
+  async function handleJoin(): Promise<void> {
+    if (!joinOwnerId(joinInput)) {
+      Taro.showToast({ title: '同步码格式不对（至少 8 位）', icon: 'none' })
+      return
+    }
+    const id = getOwnerId()
+    setOwnerId_(id)
+    Taro.showToast({ title: '已加入，正在同步…', icon: 'none' })
+    const r = await syncNow()
+    if (r.ok) { refresh(); Taro.eventCenter.trigger('dataChanged') }
+  }
+
+  function handleRegenerate(): void {
+    Taro.showModal({
+      title: '换新同步码？',
+      content: '换新码后本机将和一个新的云端账本同步，旧账本数据仍在云端但不再拉取',
+      success: (res) => {
+        if (res.confirm) { setOwnerId_(regenerateOwnerId()) }
       },
     })
   }
@@ -195,10 +237,43 @@ export default function Index(): JSX.Element {
         )}
       </View>
 
-      {/* 清除数据 */}
+      {/* 云同步 & 清除数据 */}
+      <View className='clear-btn' onClick={openCloud}>
+        <Text className='clear-text'>☁️ 云同步 · 同步码：{formatOwnerId(ownerId || getOwnerId())}</Text>
+      </View>
       <View className='clear-btn' onClick={clearAll}>
         <Text className='clear-text'>清除所有数据</Text>
       </View>
+
+      {/* ====== 云同步 / 同步码弹窗 ====== */}
+      {showCloud && (
+        <View className='modal' onClick={() => setShowCloud(false)}>
+          <View className='modal-box' onClick={(e) => e.stopPropagation()}>
+            <Text className='modal-title'>☁️ 云同步</Text>
+            <Text style='font-size:24rpx;color:#64748B;display:block;margin-bottom:16rpx'>
+              {usingRealCloud() ? '已连接云环境，同码设备共享一本账' : '未连接云环境，当前为本地模拟云'}
+            </Text>
+
+            <Text style='font-size:26rpx;color:#334155;font-weight:600;display:block;margin-bottom:8rpx'>我的同步码</Text>
+            <View style='display:flex;align-items:center;gap:16rpx;margin-bottom:24rpx'>
+              <Text style='font-size:32rpx;font-weight:700;color:#FF6B35;letter-spacing:2rpx'>{formatOwnerId(ownerId)}</Text>
+              <View className='btn btn-ok' style='height:56rpx;padding:0 24rpx' onClick={copyOwnerId}><Text style='color:#fff;font-size:24rpx'>复制</Text></View>
+            </View>
+            <Text style='font-size:22rpx;color:#94A3B8;display:block;margin-bottom:24rpx'>
+              在电脑桌面端输入同一个码，手机和电脑就同步同一本账；别人用小程序会自动分到各自的账本，互相看不到
+            </Text>
+
+            <Text style='font-size:26rpx;color:#334155;font-weight:600;display:block;margin-bottom:8rpx'>输入桌面端的码，加入同一本账</Text>
+            <View className='input-wrap'>
+              <Input className='input' placeholder='如：ABCD-EFGH-JKMN' value={joinInput} onInput={(e) => setJoinInput(e.detail.value)} maxlength={16} />
+            </View>
+            <View className='modal-btns'>
+              <View className='btn btn-cancel' onClick={handleRegenerate}><Text>换新码</Text></View>
+              <View className='btn btn-ok' onClick={handleJoin}><Text className='btn-ok-text'>加入</Text></View>
+            </View>
+          </View>
+        </View>
+      )}
 
       {/* ====== 预算弹窗 ====== */}
       {showBudget && (

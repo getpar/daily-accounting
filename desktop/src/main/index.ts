@@ -11,6 +11,28 @@ let SQL: SqlJsStatic | null = null
 let DB_PATH = ''
 let isQuitting = false  // 标记是否真正退出
 
+// ---- 周期账单自动执行 → 渲染进程通知 ----
+
+interface AutoBillInfo {
+  name: string     // 分类名，用于提示文案
+  amount: number
+  type: string
+  nextDate: string // 自动推算出的下次到期日
+}
+
+let rendererReady = false
+let pendingAutoNotify: AutoBillInfo[] = []
+
+function notifyAutoBills(list: AutoBillInfo[]): void {
+  if (list.length === 0) return
+  if (mainWindow && !mainWindow.isDestroyed() && rendererReady) {
+    mainWindow.webContents.send('recurring:autoExecuted', list)
+  } else {
+    // 界面还没加载完，先排队，did-finish-load 后补发
+    pendingAutoNotify.push(...list)
+  }
+}
+
 // ========== 数据库初始化 ==========
 
 async function initDatabase(): Promise<void> {
@@ -97,6 +119,24 @@ async function initDatabase(): Promise<void> {
     CREATE TABLE IF NOT EXISTS settings (
       key TEXT PRIMARY KEY,
       value TEXT NOT NULL
+    )
+  `)
+
+  // 待办事项表（与小程序端 todos 功能对齐）
+  db.run(`
+    CREATE TABLE IF NOT EXISTS todos (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      title TEXT NOT NULL,
+      cycle TEXT NOT NULL DEFAULT 'daily',
+      next_date TEXT NOT NULL,
+      time TEXT DEFAULT '',
+      is_active INTEGER DEFAULT 1,
+      amount REAL DEFAULT 0,
+      category_key TEXT DEFAULT '',
+      subcategory_key TEXT DEFAULT '',
+      note TEXT DEFAULT '',
+      completed_dates TEXT DEFAULT '[]',
+      created_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
     )
   `)
 }
@@ -192,6 +232,16 @@ function queryAll(sql: string, params?: any[]): any[] {
 function queryOne(sql: string, params?: any[]): any {
   const rows = queryAll(sql, params)
   return rows[0] || null
+}
+
+// 待办完成日期列表（JSON 字符串 → 字符串数组，脏数据降级为空数组）
+function parseDateArray(v: unknown): string[] {
+  try {
+    const arr = JSON.parse(typeof v === 'string' && v ? v : '[]')
+    return Array.isArray(arr) ? arr.filter((x) => typeof x === 'string') : []
+  } catch {
+    return []
+  }
 }
 
 // ========== IPC 通信处理 ==========
@@ -500,6 +550,74 @@ function setupIPC(): void {
     return { success: true }
   })
 
+  // ---- 待办事项（与小程序端功能对齐：5 种周期 + 可选时间 + 关联金额自动记账）----
+  ipcMain.handle('todos:getAll', () => {
+    return queryAll(
+      `SELECT t.*, c.category_name, c.subcategory_name
+       FROM todos t
+       LEFT JOIN categories c ON t.category_key = c.category_key AND t.subcategory_key = c.subcategory_key
+       ORDER BY t.is_active DESC, t.next_date`
+    ).map((t) => ({ ...t, completed_dates: parseDateArray(t.completed_dates) }))
+  })
+
+  ipcMain.handle('todos:add', (_event, data: {
+    title: string; cycle: string; next_date: string; time?: string
+    amount?: number; category_key?: string; subcategory_key?: string; note?: string
+  }) => {
+    db!.run(
+      `INSERT INTO todos (title, cycle, next_date, time, is_active, amount, category_key, subcategory_key, note)
+       VALUES (?, ?, ?, ?, 1, ?, ?, ?, ?)`,
+      [data.title, data.cycle || 'daily', data.next_date, data.time || '',
+       data.amount || 0, data.category_key || '', data.subcategory_key || '', data.note || '']
+    )
+    saveDatabase()
+    return { id: db!.exec('SELECT last_insert_rowid() as id')[0]?.values[0]?.[0] || 0 }
+  })
+
+  ipcMain.handle('todos:delete', (_event, id: number) => {
+    db!.run('DELETE FROM todos WHERE id = ?', [id])
+    saveDatabase()
+    return { success: true }
+  })
+
+  ipcMain.handle('todos:toggle', (_event, id: number, active: boolean) => {
+    db!.run('UPDATE todos SET is_active = ? WHERE id = ?', [active ? 1 : 0, id])
+    saveDatabase()
+    return { success: true }
+  })
+
+  // 完成待办：记录完成日期；有关联金额则自动记一笔支出；单次型自动停用，周期型自动推算下次日期
+  ipcMain.handle('todos:complete', (_event, id: number) => {
+    const todo = queryOne('SELECT * FROM todos WHERE id = ?', [id])
+    if (!todo) return { success: false, error: '待办不存在' }
+    const today = new Date().toISOString().slice(0, 10)
+    const done = parseDateArray(todo.completed_dates)
+    if (!done.includes(today)) done.push(today)
+    let recorded: { amount: number; date: string } | null = null
+    if (todo.amount > 0 && todo.category_key && todo.subcategory_key) {
+      db!.run(
+        'INSERT INTO records (type, amount, category_key, subcategory_key, note, record_date) VALUES (?, ?, ?, ?, ?, ?)',
+        ['expense', todo.amount, todo.category_key, todo.subcategory_key,
+         `[待办] ${todo.title}${todo.note ? ' · ' + todo.note : ''}`, today]
+      )
+      recorded = { amount: todo.amount, date: today }
+    }
+    let nextDate = todo.next_date
+    let active = todo.is_active
+    if (todo.cycle === 'once') {
+      active = 0 // 单次待办完成后自动停用，沉底到已完成区
+    } else {
+      // 与小程序端一致：每完成一次仅向后推一个周期
+      nextDate = getNextDate(todo.next_date, todo.cycle)
+    }
+    db!.run(
+      'UPDATE todos SET completed_dates = ?, next_date = ?, is_active = ? WHERE id = ?',
+      [JSON.stringify(done), nextDate, active, id]
+    )
+    saveDatabase()
+    return { success: true, recorded }
+  })
+
   // ---- 云同步（状态查询，实际同步在渲染进程 cloudbase.ts 中执行）----
   ipcMain.handle('cloud:getStatus', () => ({
     enabled: false,  // 由渲染进程 cloudbase.ts 管理连接状态
@@ -516,26 +634,43 @@ function setupIPC(): void {
   })
 }
 
-// 检查周期性账单到期
+// 检查周期性账单到期（启动时 + 运行期定时调用）
 function checkRecurringBills(): void {
   if (!db) return
   const today = new Date().toISOString().slice(0, 10)
   const due = queryAll(
-    'SELECT * FROM recurring_bills WHERE is_active = 1 AND next_date <= ?',
+    `SELECT r.*, c.category_name, c.subcategory_name
+     FROM recurring_bills r
+     LEFT JOIN categories c ON r.category_key = c.category_key AND r.subcategory_key = c.subcategory_key
+     WHERE r.is_active = 1 AND r.next_date <= ?`,
     [today]
   )
+  if (due.length === 0) return
+  const executed: AutoBillInfo[] = []
   for (const bill of due) {
-    // 自动创建账单记录
+    // 到期即自动记一笔（日期 = 今天，备注加 [周期] 标记，与手动触发一致）
     db.run(
       'INSERT INTO records (type, amount, category_key, subcategory_key, note, record_date) VALUES (?, ?, ?, ?, ?, ?)',
       [bill.type, bill.amount, bill.category_key, bill.subcategory_key,
-       `[周期性] ${bill.note || ''}`, today]
+       `[周期] ${bill.note || ''}`, today]
     )
-    // 更新下次日期
-    const next = getNextDate(bill.next_date, bill.cycle)
+    // 快进所有已过期周期，推算到今天之后的第一个未来日期；
+    // 隔几个月才打开软件也只为本次到期记 1 笔，不重复补记历史账
+    let next = getNextDate(bill.next_date, bill.cycle)
+    let guard = 0
+    while (next <= today && guard++ < 2000) {
+      const prev = next
+      next = getNextDate(next, bill.cycle)
+      if (next === prev) break // 未知周期导致日期不推进，防死循环
+    }
     db.run('UPDATE recurring_bills SET next_date = ? WHERE id = ?', [next, bill.id])
+    executed.push({
+      name: bill.subcategory_name || bill.category_name || '周期账单',
+      amount: bill.amount, type: bill.type, nextDate: next,
+    })
   }
-  if (due.length > 0) saveDatabase()
+  saveDatabase()
+  notifyAutoBills(executed)
 }
 
 function getNextDate(current: string, cycle: string): string {
@@ -624,6 +759,15 @@ function createWindow(): void {
     if (isQuitting) return
     event.preventDefault()
     showCloseDialog()
+  })
+
+  // 界面加载完成后，补发启动期间积压的周期账单自动入账通知
+  mainWindow.webContents.on('did-finish-load', () => {
+    rendererReady = true
+    if (pendingAutoNotify.length > 0) {
+      notifyAutoBills(pendingAutoNotify)
+      pendingAutoNotify = []
+    }
   })
 
   const devServerUrl = process.env.VITE_DEV_SERVER_URL || process.env.ELECTRON_RENDERER_URL
@@ -735,6 +879,11 @@ if (!gotLock) {
 
   createWindow()
   createTray()
+
+  // 周期账单自动执行：启动时检查一次到期账单；之后每 30 分钟检查一次，
+  // 覆盖软件整日常驻不关时“跨午夜到期”的场景
+  checkRecurringBills()
+  setInterval(() => checkRecurringBills(), 30 * 60 * 1000)
 
   // 注册全局快捷键
   const savedShortcut = queryOne('SELECT value FROM settings WHERE key = ?', ['shortcut_key'])

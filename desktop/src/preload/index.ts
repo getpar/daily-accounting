@@ -42,6 +42,18 @@ contextBridge.exposeInMainWorld('electronAPI', {
   deleteRecurring: (id: number) => ipcRenderer.invoke('recurring:delete', id),
   toggleRecurring: (id: number, active: boolean) => ipcRenderer.invoke('recurring:toggle', id, active),
   executeRecurring: (id: number) => ipcRenderer.invoke('recurring:executeNow', id),
+  // 主进程到期自动入账后推送提醒（启动时积压的会在界面加载完后补发）
+  onRecurringAutoRun: (callback: (list: { name: string; amount: number; type: string; nextDate: string }[]) => void) => {
+    ipcRenderer.on('recurring:autoExecuted', (_event, list) => callback(list))
+  },
+
+  // 待办事项
+  getTodos: () => ipcRenderer.invoke('todos:getAll'),
+  addTodo: (data: { title: string; cycle: string; next_date: string; time?: string; amount?: number; category_key?: string; subcategory_key?: string; note?: string }) =>
+    ipcRenderer.invoke('todos:add', data),
+  deleteTodo: (id: number) => ipcRenderer.invoke('todos:delete', id),
+  toggleTodo: (id: number, active: boolean) => ipcRenderer.invoke('todos:toggle', id, active),
+  completeTodo: (id: number) => ipcRenderer.invoke('todos:complete', id),
 
   // 快捷键
   getShortcut: () => ipcRenderer.invoke('shortcut:get'),

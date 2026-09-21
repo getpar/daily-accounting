@@ -1,6 +1,6 @@
 import Taro from '@tarojs/taro'
-import { initCloud, fetchRecords, addCloudRecord, updateCloudRecord, deleteCloudRecord,
-         getCloudSetting, setCloudSetting, fetchCustomCategories, addCustomCategory as addCloudCat, deleteCustomCategory as delCloudCat } from './cloud'
+import { getCloudCollection, getOwnerId, taroStore } from './cloud'
+import { runSync, SyncableRecord, SyncResult } from './cloudCore'
 
 // ========== 类型 ==========
 
@@ -16,31 +16,47 @@ export interface RecordItem {
   date: string
 }
 
-// ========== 云/本地 混合模式 ==========
+// ========== 云同步（本地为主 + 云端双向增量同步） ==========
 
-let useCloud = false
-
-export async function enableCloud(): Promise<boolean> {
-  const ok = await initCloud()
-  useCloud = ok
-  return ok
+/**
+ * 执行一次双向同步：本地新记录上传云端，云端（桌面端等其他设备）新记录拉回本地。
+ * 只同步同一个“同步码”（ownerId）的记录 — 多用户隔离的关键。
+ * 未配置 CLOUD_ENV_ID 时走「本地模拟云」，逻辑完全一致，接真云零改动。
+ * 同步范围为新增记录（按笔数配对）；编辑/删除暂不同步（与桌面端当前行为一致）。
+ */
+export async function syncNow(): Promise<SyncResult> {
+  return runSync({
+    cloud: getCloudCollection(),
+    source: 'miniapp',
+    ownerId: getOwnerId(),
+    getLocal: getRecords,
+    addLocal: mergeLocalRecords,
+    store: taroStore,
+  })
 }
 
-export function isCloudEnabled(): boolean { return useCloud }
+/** 把云端记录写入本地（v0.6.5：笔数配对已由同步引擎算好，这里只防同一云端记录重复入账），返回实际新增条数 */
+async function mergeLocalRecords(records: SyncableRecord[]): Promise<number> {
+  const list = await getRecords()
+  const seenIds = new Set(list.map((r) => String(r.id)))
+  let added = 0
+  for (const r of records) {
+    if (r.id && seenIds.has(String(r.id))) continue // 同一条云端记录不重复导入
+    list.push({ ...r, id: r.id || `c_${Date.now()}_${added}` } as RecordItem)
+    if (r.id) seenIds.add(String(r.id))
+    added++
+  }
+  if (added > 0) {
+    list.sort((a, b) => b.date.localeCompare(a.date))
+    saveLocalRecords(list)
+  }
+  return added
+}
 
 // ========== 记录 CRUD ==========
 
 export async function getRecords(): Promise<RecordItem[]> {
-  if (useCloud) {
-    const rows = await fetchRecords()
-    return rows.map((r) => ({
-      id: r._id!, type: r.type, amount: r.amount,
-      categoryKey: r.categoryKey, categoryName: r.categoryName,
-      subcategoryKey: r.subcategoryKey, subcategoryName: r.subcategoryName,
-      note: r.note || '', date: r.date,
-    }))
-  }
-  // 本地存储
+  // 本地存储是读取的唯一来源（快、可离线），云端由 syncNow 增量合入
   const raw = Taro.getStorageSync('daily_records')
   return raw ? JSON.parse(raw) : []
 }
@@ -50,22 +66,23 @@ function saveLocalRecords(list: RecordItem[]): void {
 }
 
 export async function addRecord(r: Omit<RecordItem, 'id'>): Promise<void> {
-  if (useCloud) {
-    await addCloudRecord(r)
-    return
-  }
   const list = await getRecords()
-  list.unshift({ ...r, id: Date.now().toString() })
+  const record: RecordItem = { ...r, id: Date.now().toString() }
+  list.unshift(record)
   saveLocalRecords(list)
+  // v0.6.5 起不再单条直推云端，改交给同步引擎按"笔数配对"推送：
+  // 否则双端同时记同一笔会在云端临时形成两条同键文档，引擎会误判成真有两笔而重复入账
+  try {
+    await syncNow()
+  } catch { /* 失败不阻塞，下次进页的 syncNow 会兜底补传 */ }
 }
 
+// 注意：删除/编辑仅作用于本地，暂不同步到云端（与桌面端行为一致，避免幽灵记录）
 export async function deleteRecord(id: string): Promise<void> {
-  if (useCloud) { await deleteCloudRecord(id); return }
   saveLocalRecords((await getRecords()).filter((r) => r.id !== id))
 }
 
 export async function updateRecord(id: string, data: Partial<RecordItem>): Promise<void> {
-  if (useCloud) { await updateCloudRecord(id, data); return }
   saveLocalRecords((await getRecords()).map((r) => (r.id === id ? { ...r, ...data } : r)))
 }
 
@@ -152,10 +169,6 @@ export function getSubcategoryName(catKey: string, subKey: string): string {
 type CustomCat = { categoryKey: string; categoryName: string; subcategoryKey: string; subcategoryName: string }
 
 async function getCustomCategories(): Promise<CustomCat[]> {
-  if (useCloud) {
-    const rows = await fetchCustomCategories()
-    return rows.map((r) => ({ categoryKey: r.categoryKey, categoryName: r.categoryName, subcategoryKey: r.subcategoryKey, subcategoryName: r.subcategoryName }))
-  }
   const raw = Taro.getStorageSync('custom_categories')
   return raw ? JSON.parse(raw) : []
 }
@@ -178,14 +191,12 @@ export async function getMergedCategories(): Promise<typeof DEFAULT_CATEGORIES> 
 }
 
 export async function addCustomCategory(catKey: string, catName: string, subKey: string, subName: string): Promise<void> {
-  if (useCloud) { await addCloudCat({ categoryKey: catKey, categoryName: catName, subcategoryKey: subKey, subcategoryName: subName }); return }
   const list = await getCustomCategories()
   list.push({ categoryKey: catKey, categoryName: catName, subcategoryKey: subKey, subcategoryName: subName })
   saveLocalCustomCats(list)
 }
 
 export async function deleteCustomCategory(subKey: string): Promise<void> {
-  if (useCloud) { await delCloudCat(subKey); return }
   saveLocalCustomCats((await getCustomCategories()).filter((c) => c.subcategoryKey !== subKey))
 }
 
@@ -193,16 +204,14 @@ export async function isCustomCategory(subKey: string): Promise<boolean> {
   return (await getCustomCategories()).some((c) => c.subcategoryKey === subKey)
 }
 
-// ========== 预算（云端+本地混合）==========
+// ========== 预算（本地存储）==========
 
 export async function getBudget(): Promise<number> {
-  if (useCloud) { const v = await getCloudSetting('monthly_budget'); return v ? Number(v) : 0 }
   const b = Taro.getStorageSync('budget')
   return b ? Number(b) : 0
 }
 
 export async function setBudget(val: number): Promise<void> {
-  if (useCloud) { if (val === 0) { await setCloudSetting('monthly_budget', ''); return } await setCloudSetting('monthly_budget', String(val)); return }
   if (val === 0) { Taro.removeStorageSync('budget'); return }
   Taro.setStorageSync('budget', String(val))
 }

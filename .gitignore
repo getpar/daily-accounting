@@ -25,6 +25,7 @@ desktop.ini
 
 # ===== 编译缓存 =====
 .swc/
+.sync-verify/
 
 # ===== 临时文件 =====
 *.log

@@ -55,6 +55,23 @@ interface MonthCompareResult {
   month2: { rows: MonthlyStat[]; total: number }
 }
 
+interface TodoItem {
+  id: number
+  title: string
+  cycle: string            // daily | weekly | monthly | yearly | once
+  next_date: string
+  time: string             // HH:mm，空字符串 = 不限
+  is_active: number
+  amount: number           // 关联金额，0 = 不自动记账
+  category_key: string
+  subcategory_key: string
+  category_name: string | null
+  subcategory_name: string | null
+  note: string
+  completed_dates: string[]
+  created_at: string
+}
+
 interface ElectronAPI {
   // 分类
   getCategories: () => Promise<Category[]>
@@ -91,6 +108,14 @@ interface ElectronAPI {
   deleteRecurring: (id: number) => Promise<{ success: boolean }>
   toggleRecurring: (id: number, active: boolean) => Promise<{ success: boolean }>
   executeRecurring: (id: number) => Promise<{ success: boolean; error?: string }>
+  onRecurringAutoRun: (callback: (list: { name: string; amount: number; type: string; nextDate: string }[]) => void) => void
+
+  // 待办事项
+  getTodos: () => Promise<TodoItem[]>
+  addTodo: (data: { title: string; cycle: string; next_date: string; time?: string; amount?: number; category_key?: string; subcategory_key?: string; note?: string }) => Promise<{ id: number }>
+  deleteTodo: (id: number) => Promise<{ success: boolean }>
+  toggleTodo: (id: number, active: boolean) => Promise<{ success: boolean }>
+  completeTodo: (id: number) => Promise<{ success: boolean; recorded?: { amount: number; date: string } | null; error?: string }>
   getShortcut: () => Promise<string>
   setShortcut: (accelerator: string) => Promise<{ success: boolean }>
 
@@ -106,4 +131,5 @@ declare global {
   }
 }
 
+export type { Category, RecordItem, MonthlyStat, RecordListResult, RecurringBill, MonthCompareResult, TodoItem }
 export {}
